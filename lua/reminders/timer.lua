@@ -19,7 +19,7 @@ function M.scan_for_reminders(paths)
     for _, path in ipairs(paths) do
         -- Placeholder for scanning logic
         -- Iterate over files in the path and call reminder.scan_file
-        print("Scanning for reminders in path: " .. path)
+        -- print("Scanning for reminders in path: " .. path)
     end
 end
 

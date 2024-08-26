@@ -3,19 +3,17 @@ Neovim Reminders Plugin
 
 A Neovim plugin written in Lua to manage and display reminders directly in your
 markdown notes. This plugin scans your configured repositories for reminders in
-the format #reminder datetime text.
+the format `#reminder datetime text`.
 
-I use the very nice [renerocksai/telekasten.nvim](https://github.com/nvim-telekasten/telekasten.nvim) for 
-my notes and this plugin adds reminders w/o the mess of UI popups or device
-sync (I only want the reminders when I'm in nvim AND ready for them).
-
-# UNDER CONSTRUCTION
-
-# UNDER CONSTRUCTION
+I use the very nice
+[renerocksai/telekasten.nvim](https://github.com/nvim-telekasten/telekasten.nvim)
+for my notes and my `nvim-reminders` plugin adds reminders w/o the mess of UI
+pop-ups or device sync because I only want the reminders when I'm in nvim AND
+ready for them.
 
 # UNDER CONSTRUCTION
 
-Scanning and the pick-list still not implemented
+Async Scanning not implemented
 
 ## Features
 
@@ -85,6 +83,17 @@ EOF
 ```
 
 ## Usage
+
+Create reminders in your `*.md` files as:
+
+```markdown
+#reminder in 2 hours: check logs for errors
+```
+
+and when you are ready for a quickfix list of reminders run `:ReminderScan`. Hit
+<ENTER> on the reminder you want to address and to resolve it put a symbol
+before the time - damage the parsing of it somehow. (looking for workflow
+suggestions for something nicer).
 
 ### Customizing the Repository List
 
