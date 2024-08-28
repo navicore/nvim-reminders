@@ -9,7 +9,7 @@ end
 
 -- Function to parse expressions like "in 20 minutes"
 function M.parse_minutes(expression)
-    local minutes = string.match(expression, "in (%d+) minutes")
+    local minutes = string.match(expression, "in (%d+) minute[s]?")
     if minutes then
         return add_time(tonumber(minutes) * 60)
     end

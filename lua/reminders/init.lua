@@ -79,7 +79,7 @@ function M.setup(user_config)
 
     -- Set up autocmds for markdown files in the configured paths
     require('reminders.autocmds').setup_autocmds(M.config.paths)
-    require('reminders.timer').start(M.config.paths)
+
 end
 
 return M
