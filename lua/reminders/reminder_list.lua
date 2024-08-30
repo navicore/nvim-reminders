@@ -14,7 +14,7 @@ local function scan_file(file_path)
         local datetime = line:match("#reminder (%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)")
         if datetime then
             local time_diff = time_parser.time_until(datetime)
-            if time_diff == "now" or time_diff:find("in 0 minutes") then
+            if time_diff:find(" ago") or time_diff:find("in 0 minutes") then
                 table.insert(M.reminders, {
                     file = file_path,
                     line_number = i,

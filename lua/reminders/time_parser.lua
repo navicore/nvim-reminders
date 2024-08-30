@@ -64,7 +64,7 @@ function M.parse(expression)
 end
 
 function M.time_until(datetime)
-    -- Extract components from the ISO 8601 string and convert them to integers
+    -- Extract components from the ISO 8601 string and convert them to strings or numbers as needed
     local year = tostring(datetime:sub(1, 4))
     local month = tostring(datetime:sub(6, 7))
     local day = tostring(datetime:sub(9, 10))
@@ -96,9 +96,8 @@ function M.time_until(datetime)
 
     local diff = os.difftime(reminder_time, now)
 
-    if diff <= 0 then
-        return "now"
-    end
+    local is_past = diff < 0
+    diff = math.abs(diff)
 
     local days = math.floor(diff / time_units.day.seconds)
     diff = diff % time_units.day.seconds
@@ -111,7 +110,11 @@ function M.time_until(datetime)
     if hours > 0 then table.insert(parts, hours .. " hours") end
     if minutes > 0 then table.insert(parts, minutes .. " minutes") end
 
-    return "in " .. table.concat(parts, " and ")
+    if #parts == 0 then
+        return is_past and "just now" or "in a moment"
+    else
+        return is_past and (table.concat(parts, " and ") .. " ago") or ("in " .. table.concat(parts, " and "))
+    end
 end
 
 return M
