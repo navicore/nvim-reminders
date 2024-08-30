@@ -1,5 +1,3 @@
--- lua/reminders/time_parser.lua
-
 local M = {}
 
 -- Helper function to add seconds to the current time in UTC
@@ -7,33 +5,30 @@ local function add_time(seconds)
     return os.date("!%Y-%m-%dT%H:%M:%SZ", os.time() + seconds)
 end
 
--- Function to parse expressions like "in 20 minutes"
-function M.parse_minutes(expression)
-    local minutes = string.match(expression, "in (%d+) minute[s]?")
-    if minutes then
-        return add_time(tonumber(minutes) * 60)
-    end
-end
+-- Table for time units and their corresponding seconds
+local time_units = {
+    minute = {single = "minute", plural = "minutes", seconds = 60},
+    hour = {single = "hour", plural = "hours", seconds = 3600},
+    day = {single = "day", plural = "days", seconds = 86400},
+    week = {single = "week", plural = "weeks", seconds = 604800},       -- Added support for weeks
+    month = {single = "month", plural = "months", seconds = 2592000},   -- Approximation (30 days)
+    year = {single = "year", plural = "years", seconds = 31536000},     -- Approximation (365 days)
+}
 
--- Function to parse expressions like "in 1 hour"
-function M.parse_hours(expression)
-    local hours = string.match(expression, "in (%d+) hours")
-    if hours then
-        return add_time(tonumber(hours) * 3600)
-    end
-end
-
--- Function to parse expressions like "in 1 day"
-function M.parse_days(expression)
-    local days = string.match(expression, "in (%d+) days")
-    if days then
-        return add_time(tonumber(days) * 86400)
+-- General function to parse expressions like "in 20 minutes", "in 1 hour", etc.
+function M.parse_time_expression(expression)
+    for _, unit in pairs(time_units) do
+        local pattern = "in (%d+) " .. unit.single .. "[s]?"
+        local match = string.match(expression, pattern)
+        if match then
+            return add_time(tonumber(match) * unit.seconds)
+        end
     end
 end
 
 -- Function to parse "tomorrow"
 function M.parse_tomorrow()
-    local tomorrow = os.time() + 86400
+    local tomorrow = os.time() + time_units.day.seconds
     return os.date("!%Y-%m-%dT00:00:00Z", tomorrow)
 end
 
@@ -56,26 +51,23 @@ function M.parse_next_weekday(expression)
         local target_wday = days_of_week[next_day:lower()]
         local days_ahead = (target_wday - today + 7) % 7
         days_ahead = days_ahead == 0 and 7 or days_ahead
-        local next_target_day = os.time() + (days_ahead * 86400)
+        local next_target_day = os.time() + (days_ahead * time_units.day.seconds)
         return os.date("!%Y-%m-%dT00:00:00Z", next_target_day)
     end
 end
 
 -- Main function to parse any time expression
 function M.parse(expression)
-    return M.parse_minutes(expression)
-        or M.parse_hours(expression)
-        or M.parse_days(expression)
+    return M.parse_time_expression(expression)
         or (expression == "tomorrow" and M.parse_tomorrow())
         or M.parse_next_weekday(expression)
 end
 
--- Function to calculate the time difference and return a human-readable string
 function M.time_until(datetime)
-    -- Extract components from the ISO 8601 string
-    local year = tonumber(datetime:sub(1, 4))
-    local month = tonumber(datetime:sub(6, 7))
-    local day = tonumber(datetime:sub(9, 10))
+    -- Extract components from the ISO 8601 string and convert them to integers
+    local year = tostring(datetime:sub(1, 4))
+    local month = tostring(datetime:sub(6, 7))
+    local day = tostring(datetime:sub(9, 10))
     local hour = tonumber(datetime:sub(12, 13))
     local min = tonumber(datetime:sub(15, 16))
     local sec = tonumber(datetime:sub(18, 19))
@@ -92,18 +84,27 @@ function M.time_until(datetime)
     })
 
     -- Get the current time in UTC
-    local now = os.time(os.date("!*t"))
+    local now = os.time({
+        year = tostring(os.date("!%Y")),
+        month = tostring(os.date("!%m")),
+        day = tostring(os.date("!%d")),
+        hour = tonumber(os.date("!%H")),
+        min = tonumber(os.date("!%M")),
+        sec = tonumber(os.date("!%S")),
+        isdst = false
+    })
+
     local diff = os.difftime(reminder_time, now)
 
     if diff <= 0 then
         return "now"
     end
 
-    local days = math.floor(diff / 86400)
-    diff = diff % 86400
-    local hours = math.floor(diff / 3600)
-    diff = diff % 3600
-    local minutes = math.floor(diff / 60)
+    local days = math.floor(diff / time_units.day.seconds)
+    diff = diff % time_units.day.seconds
+    local hours = math.floor(diff / time_units.hour.seconds)
+    diff = diff % time_units.hour.seconds
+    local minutes = math.floor(diff / time_units.minute.seconds)
 
     local parts = {}
     if days > 0 then table.insert(parts, days .. " days") end
