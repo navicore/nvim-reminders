@@ -166,7 +166,7 @@ function M.open_reminder_item()
 end
 
 -- Set up the user command
-api.nvim_create_user_command('RemindersScan', function()
+api.nvim_create_user_command('ReminderScan', function()
     M.scan_reminders()
 end, {})
 
