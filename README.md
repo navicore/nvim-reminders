@@ -11,8 +11,6 @@ for my notes and my `nvim-reminders` plugin adds reminders w/o the mess of UI
 pop-ups or device sync because I only want the reminders when I'm in nvim AND
 ready for them.
 
-# UNDER CONSTRUCTION
-
 Async Scanning not implemented
 
 ## Features
