@@ -3,7 +3,11 @@ Neovim Reminders Plugin
 
 A Neovim plugin written in Lua to manage and display reminders directly in your
 markdown notes. This plugin scans your configured repositories for reminders in
-the format `#reminder datetime text`.
+the format: 
+
+```markdown
+#reminder datetime: text
+```
 
 I use the very nice
 [renerocksai/telekasten.nvim](https://github.com/nvim-telekasten/telekasten.nvim)
