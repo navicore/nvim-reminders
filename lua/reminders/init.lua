@@ -125,7 +125,10 @@ local function show_reminders()
         api.nvim_buf_set_keymap(bufnr, 'n', 'q', [[<cmd>lua vim.api.nvim_win_close(0, true)<CR>]], { noremap = true, silent = true })
         api.nvim_buf_set_keymap(bufnr, 'n', 't', [[<cmd>lua require('reminders').toggle_sort_order()<CR>]], { noremap = true, silent = true })
 
-        vim.cmd('helptags ' .. vim.fn.expand('<sfile>:p:h') .. '/doc')
+        -- Load the help file
+        local plugin_dir = vim.fn.stdpath('data') .. '/lazy/nvim-reminders'
+        local doc_dir = plugin_dir .. '/doc'
+        vim.cmd('helptags ' .. doc_dir)
 
     else
         api.nvim_win_close(win, true)
@@ -172,10 +175,10 @@ function M.open_reminder_item()
 end
 
 -- Set up the user command
-api.nvim_create_user_command('ReminderScan', function(opts)
+api.nvim_create_user_command('ReminderScan', function()
     M.scan_reminders(false)
 end, { })
-api.nvim_create_user_command('ReminderScanUpcoming', function(opts)
+api.nvim_create_user_command('ReminderScanUpcoming', function()
     M.scan_reminders(true)
 end, { })
 api.nvim_create_user_command('ReminderScanAll', function()
