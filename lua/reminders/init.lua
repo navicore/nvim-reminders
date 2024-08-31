@@ -127,7 +127,7 @@ local function show_reminders()
 
     else
         api.nvim_win_close(win, true)
-        print("No due reminders found.")
+        print("No reminders found.")
     end
 end
 
@@ -143,8 +143,12 @@ function M.toggle_sort_order()
 end
 
 -- Function to scan for reminders and display them
-function M.scan_reminders()
-    reminder_list.scan_paths(M.config.paths)
+function M.scan_reminders(upcoming)
+    if upcoming then
+        reminder_list.scan_paths_upcoming(M.config.paths)
+    else
+        reminder_list.scan_paths(M.config.paths)
+    end
     show_reminders()
 end
 
@@ -166,8 +170,15 @@ function M.open_reminder_item()
 end
 
 -- Set up the user command
-api.nvim_create_user_command('ReminderScan', function()
-    M.scan_reminders()
+api.nvim_create_user_command('ReminderScan', function(opts)
+    M.scan_reminders(false)
+end, { })
+api.nvim_create_user_command('ReminderScanUpcoming', function(opts)
+    M.scan_reminders(true)
+end, { })
+api.nvim_create_user_command('ReminderScanAll', function()
+    reminder_list.scan_paths_all(M.config.paths)
+    show_reminders()
 end, {})
 
 -- Plugin setup function
