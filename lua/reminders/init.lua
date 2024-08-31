@@ -1,35 +1,57 @@
 -- lua/reminders/init.lua
-
 local M = {}
-
 local reminder_list = require('reminders.reminder_list')
+local api = vim.api
+local fn = vim.fn
 
--- Table to map buffer numbers to filenames
-M.bufnr_to_filename = {}
+-- Table to store full reminder information
+M.full_reminders = {}
 
--- Function to display reminders in the quickfix list
+-- Function to create a floating window
+local function create_floating_window()
+    local width = math.floor(vim.o.columns * 0.8)
+    local height = math.floor(vim.o.lines * 0.8)
+    local bufnr = api.nvim_create_buf(false, true)
+    local opts = {
+        relative = "editor",
+        width = width,
+        height = height,
+        col = math.floor((vim.o.columns - width) / 2),
+        row = math.floor((vim.o.lines - height) / 2),
+        style = "minimal",
+        border = "rounded"
+    }
+    local win = api.nvim_open_win(bufnr, true, opts)
+    return bufnr, win
+end
+
+-- Function to display reminders in a floating window
 local function show_reminders()
-    local items = {}
-    M.bufnr_to_filename = {}  -- Clear previous mappings
-
-    for _, reminder in ipairs(reminder_list.reminders) do
-        local bufnr = vim.fn.bufnr(reminder.file, true)  -- Ensure buffer is loaded
-        M.bufnr_to_filename[bufnr] = vim.fn.fnamemodify(reminder.file, ":p")  -- Map buffer to filename
-
-        table.insert(items, {
-            bufnr = bufnr,  -- Use buffer number
-            lnum = reminder.line_number,
-            text = reminder.text,
+    local bufnr, win = create_floating_window()
+    M.full_reminders = {}  -- Clear previous reminders
+    local lines = {}
+    for i, reminder in ipairs(reminder_list.reminders) do
+        local short_file = fn.fnamemodify(reminder.file, ":t")  -- Get only the file name
+        local display_text = string.format("%d. %s: %s", i, short_file, reminder.text)
+        table.insert(lines, display_text)
+        -- Store full information
+        table.insert(M.full_reminders, {
+            file = fn.fnamemodify(reminder.file, ":p"),
+            line_number = reminder.line_number,
+            text = reminder.text
         })
     end
 
-    if #items > 0 then
-        vim.fn.setqflist({}, 'r', {
-            title = 'Reminders',
-            items = items
-        })
-        vim.cmd('copen')
+    if #lines > 0 then
+        api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+        api.nvim_buf_set_option(bufnr, 'modifiable', false)
+        api.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
+
+        -- Set keymaps
+        api.nvim_buf_set_keymap(bufnr, 'n', '<CR>', [[<cmd>lua require('reminders').open_reminder_item()<CR>]], { noremap = true, silent = true })
+        api.nvim_buf_set_keymap(bufnr, 'n', 'q', [[<cmd>lua vim.api.nvim_win_close(0, true)<CR>]], { noremap = true, silent = true })
     else
+        api.nvim_win_close(win, true)
         print("No due reminders found.")
     end
 end
@@ -40,46 +62,38 @@ function M.scan_reminders()
     show_reminders()
 end
 
--- Custom function to open quickfix item using filename from mapping
-function M.open_quickfix_item()
-    local qf_idx = vim.fn.line('.')  -- Get the current cursor position in the quickfix window
-    local qf_list = vim.fn.getqflist()  -- Get the current quickfix list
-    local qf_entry = qf_list[qf_idx]  -- Access the corresponding entry
+-- Function to open reminder item from the floating window
+function M.open_reminder_item()
+    local current_line = api.nvim_win_get_cursor(0)[1]
+    local reminder = M.full_reminders[current_line]
 
-    if qf_entry and qf_entry.bufnr and M.bufnr_to_filename[qf_entry.bufnr] then
-        local filename = M.bufnr_to_filename[qf_entry.bufnr]  -- Retrieve the correct filename
-        vim.cmd('edit ' .. filename)
-        vim.api.nvim_win_set_cursor(0, { qf_entry.lnum, 0 })
+    if reminder then
+        -- Close the floating window
+        api.nvim_win_close(0, true)
+
+        -- Open the file at the specified line
+        vim.cmd('edit ' .. reminder.file)
+        vim.cmd('normal! ' .. reminder.line_number .. 'G')
     else
-        print("No valid quickfix item selected or quickfix list is empty.")
+        print("No valid reminder selected.")
     end
 end
 
--- Map Enter in quickfix window to the custom function
-vim.cmd([[
-    augroup RemindersQuickfix
-        autocmd!
-        autocmd FileType qf nnoremap <buffer> <CR> :lua require('reminders').open_quickfix_item()<CR>
-    augroup END
-]])
-
 -- Set up the user command
-vim.api.nvim_create_user_command('RemindersScan', function()
+api.nvim_create_user_command('RemindersScan', function()
     M.scan_reminders()
 end, {})
 
 -- Plugin setup function
 function M.setup(user_config)
     M.config = {
-        paths = { vim.fn.expand("~/git/" .. io.popen("whoami"):read("*a"):gsub("\n", "") .. "/zet") }
+        paths = { fn.expand("~/git/" .. io.popen("whoami"):read("*a"):gsub("\n", "") .. "/zet") }
     }
     if user_config and user_config.paths then
         M.config.paths = user_config.paths
     end
-
     -- Set up autocmds for markdown files in the configured paths
     require('reminders.autocmds').setup_autocmds(M.config.paths)
-
 end
 
 return M
