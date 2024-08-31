@@ -18,7 +18,8 @@ local function scan_file(file_path)
                 table.insert(M.reminders, {
                     file = file_path,
                     line_number = i,
-                    text = line
+                    text = line,
+                    datetime = datetime  -- Store the datetime in the reminder object
                 })
             end
         end
