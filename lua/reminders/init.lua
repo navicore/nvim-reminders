@@ -5,6 +5,7 @@ local time_parser = require('reminders.time_parser')
 local api = vim.api
 local fn = vim.fn
 local has_devicons, devicons = pcall(require, "nvim-web-devicons")
+local sort_order = "newest_to_oldest"
 
 -- Table to store full reminder information
 M.full_reminders = {}
@@ -25,10 +26,6 @@ local function create_floating_window()
     }
     local win = api.nvim_open_win(bufnr, true, opts)
     return bufnr, win
-end
-
-local function to_iso8601(timestamp)
-    return os.date("!%Y-%m-%dT%H:%M:%S", timestamp)
 end
 
 local function split_reminder_text(text)
@@ -54,6 +51,17 @@ local function show_reminders()
         local reminder_text = reminder.text:match(":(.*)$") or reminder.text
         max_text_width = math.max(max_text_width, #reminder_text)
         max_path_width = math.max(max_path_width, #short_path)
+    end
+
+    -- Sort the reminders based on the current sorting order
+    if sort_order == "newest_to_oldest" then
+        table.sort(reminder_list.reminders, function(a, b)
+            return (a.datetime or 0) > (b.datetime or 0)
+        end)
+    else
+        table.sort(reminder_list.reminders, function(a, b)
+            return (a.datetime or 0) < (b.datetime or 0)
+        end)
     end
 
     for i, reminder in ipairs(reminder_list.reminders) do
@@ -115,10 +123,23 @@ local function show_reminders()
         -- Set keymaps
         api.nvim_buf_set_keymap(bufnr, 'n', '<CR>', [[<cmd>lua require('reminders').open_reminder_item()<CR>]], { noremap = true, silent = true })
         api.nvim_buf_set_keymap(bufnr, 'n', 'q', [[<cmd>lua vim.api.nvim_win_close(0, true)<CR>]], { noremap = true, silent = true })
+        api.nvim_buf_set_keymap(bufnr, 'n', 't', [[<cmd>lua require('reminders').toggle_sort_order()<CR>]], { noremap = true, silent = true })
+
     else
         api.nvim_win_close(win, true)
         print("No due reminders found.")
     end
+end
+
+function M.toggle_sort_order()
+    if sort_order == "newest_to_oldest" then
+        sort_order = "oldest_to_newest"
+    else
+        sort_order = "newest_to_oldest"
+    end
+    -- Close the current floating window
+    api.nvim_win_close(0, true)
+    show_reminders()
 end
 
 -- Function to scan for reminders and display them
