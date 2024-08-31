@@ -125,6 +125,8 @@ local function show_reminders()
         api.nvim_buf_set_keymap(bufnr, 'n', 'q', [[<cmd>lua vim.api.nvim_win_close(0, true)<CR>]], { noremap = true, silent = true })
         api.nvim_buf_set_keymap(bufnr, 'n', 't', [[<cmd>lua require('reminders').toggle_sort_order()<CR>]], { noremap = true, silent = true })
 
+        vim.cmd('helptags ' .. vim.fn.expand('<sfile>:p:h') .. '/doc')
+
     else
         api.nvim_win_close(win, true)
         print("No reminders found.")

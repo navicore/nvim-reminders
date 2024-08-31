@@ -1,0 +1,52 @@
+*nvim-reminders.txt*  A plugin for managing reminders in Neovim
+
+==============================================================================
+CONTENTS                                                 *nvim-reminders-contents*
+
+Introduction.............................................|nvim-reminders-intro|
+Commands.................................................|nvim-reminders-commands|
+Reminders................................................|nvim-reminders-list|
+Configuration............................................|nvim-reminders-config|
+
+==============================================================================
+INTRODUCTION                                            *nvim-reminders-intro*
+
+The nvim-reminders plugin allows you to manage reminders directly within Neovim.
+It provides commands to scan for due, upcoming, and all reminders in your
+configured paths.
+
+==============================================================================
+COMMANDS                                                *nvim-reminders-commands*
+
+:ReminderScan             Scan for due reminders
+:ReminderScanUpcoming     Scan for upcoming reminders within the next 7 days
+:ReminderScanAll          Scan for all reminders, both past and future
+
+==============================================================================
+REMINDERS                                               *nvim-reminders-list*
+
+The commands will open a floating window with a list of reminders.
+
+Use vim motion keys to navigate the list.
+
+Press `q` to close the window.
+
+Press <CR> to select a reminder and open it in a new buffer.
+
+Use 't' to toggle the sort order from oldest to newest and vice versa.
+
+==============================================================================
+CONFIGURATION                                           *nvim-reminders-config*
+
+The nvim-reminders plugin can be configured by passing a configuration table
+to the `setup` function in your init.lua file:
+
+>
+  require('reminders').setup({
+    paths = { "~/path/to/your/reminders" }
+  })
+
+`paths`: A list of paths to scan for reminders
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
