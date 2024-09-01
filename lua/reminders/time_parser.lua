@@ -99,21 +99,42 @@ function M.time_until(datetime)
     local is_past = diff < 0
     diff = math.abs(diff)
 
+    local years = math.floor(diff / time_units.year.seconds)
+    diff = diff % time_units.year.seconds
+
+    local months = math.floor(diff / time_units.month.seconds)
+    diff = diff % time_units.month.seconds
+
+    local weeks = math.floor(diff / time_units.week.seconds)
+    diff = diff % time_units.week.seconds
+
     local days = math.floor(diff / time_units.day.seconds)
     diff = diff % time_units.day.seconds
+
     local hours = math.floor(diff / time_units.hour.seconds)
     diff = diff % time_units.hour.seconds
+
     local minutes = math.floor(diff / time_units.minute.seconds)
 
-    local parts = {}
-    if days > 0 then table.insert(parts, days .. " days") end
-    if hours > 0 then table.insert(parts, hours .. " hours") end
-    if minutes > 0 then table.insert(parts, minutes .. " minutes") end
-
-    if #parts == 0 then
-        return is_past and "just now" or "in a moment"
+    if years > 0 then
+        return is_past and (years .. " years ago") or ("in " .. years .. " years")
+    elseif months > 0 then
+        return is_past and (months .. " months ago") or ("in " .. months .. " months")
+    elseif weeks > 0 then
+        return is_past and (weeks .. " weeks ago") or ("in " .. weeks .. " weeks")
+    elseif days >= 2 then
+        return is_past and (days .. " days ago") or ("in " .. days .. " days")
     else
-        return is_past and (table.concat(parts, " and ") .. " ago") or ("in " .. table.concat(parts, " and "))
+        local parts = {}
+        if days > 0 then table.insert(parts, days .. " days") end
+        if hours > 0 then table.insert(parts, hours .. " hours") end
+        if minutes > 0 then table.insert(parts, minutes .. " minutes") end
+
+        if #parts == 0 then
+            return is_past and "just now" or "in a moment"
+        else
+            return is_past and (table.concat(parts, " and ") .. " ago") or ("in " .. table.concat(parts, " and "))
+        end
     end
 end
 
