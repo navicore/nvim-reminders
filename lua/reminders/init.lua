@@ -69,7 +69,7 @@ local function format_reminder(reminder, max_text_width, max_path_width, i)
     local reminder_text = split_reminder_text(reminder.text)
     local padded_text = string.format("%-" .. max_text_width .. "s", reminder_text)
     local padded_path = string.format("%-" .. max_path_width .. "s", short_path)
-    local display_text = string.format("%-2d %s %s %s %s", i, icon, padded_path, padded_text, relative_time)
+    local display_text = string.format("%2d %s %s %s %s", i, icon, padded_path, padded_text, relative_time)
     return display_text
 end
 
