@@ -5,43 +5,59 @@ local time_parser = require('reminders.time_parser')
 -- A list to store reminders that are due or past
 M.reminders = {}
 
+-- Function to parse a line for a reminder and return datetime, is_checked, and line number
+local function parse_reminder_line(line)
+    local datetime = line:match("#reminder (%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)")
+    local is_checked = line:match(": ?%[x%]")
+    return datetime, is_checked
+end
+
+-- Function to determine if a reminder is upcoming
+local function is_upcoming(datetime)
+    local time_diff = time_parser.time_until(datetime)
+    return time_diff:find("in %d+ days") or time_diff:find("in %d+ hours") or time_diff:find("in %d+ minutes")
+end
+
+-- Function to determine if a reminder is due or past
+local function is_due_or_past(datetime)
+    local time_diff = time_parser.time_until(datetime)
+    return time_diff:find("now") or time_diff:find(" ago") or time_diff:find("in 0 minutes")
+end
+
+-- Function to handle adding reminders to the list based on conditions
+local function add_reminder(file_path, i, line, datetime, upcoming, all_reminders)
+    if all_reminders then
+        table.insert(M.reminders, {
+            file = file_path,
+            line_number = i,
+            text = line,
+            datetime = datetime
+        })
+    elseif upcoming and is_upcoming(datetime) then
+        table.insert(M.reminders, {
+            file = file_path,
+            line_number = i,
+            text = line,
+            datetime = datetime
+        })
+    elseif not upcoming and is_due_or_past(datetime) then
+        table.insert(M.reminders, {
+            file = file_path,
+            line_number = i,
+            text = line,
+            datetime = datetime
+        })
+    end
+end
+
 -- Function to scan a file for reminders and add them to the list based on the condition
 local function scan_file(file_path, upcoming, all_reminders)
     local lines = vim.fn.readfile(file_path)
     for i, line in ipairs(lines) do
-        local datetime = line:match("#reminder (%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)")
-        if datetime then
-            local time_diff = time_parser.time_until(datetime)
-            if all_reminders then
-                -- Add all reminders to the list
-                table.insert(M.reminders, {
-                    file = file_path,
-                    line_number = i,
-                    text = line,
-                    datetime = datetime
-                })
-            elseif upcoming then
-                -- Check if the reminder is within the next 7 days
-                local time_diff = time_parser.time_until(datetime)
-                if time_diff:find("in %d+ days") or time_diff:find("in %d+ hours") or time_diff:find("in %d+ minutes") then
-                    table.insert(M.reminders, {
-                        file = file_path,
-                        line_number = i,
-                        text = line,
-                        datetime = datetime
-                    })
-                end
-            else
-                -- Check if the reminder is due or past
-                if time_diff:find("now") or time_diff:find(" ago") or time_diff:find("in 0 minutes") then
-                    table.insert(M.reminders, {
-                        file = file_path,
-                        line_number = i,
-                        text = line,
-                        datetime = datetime
-                    })
-                end
-            end
+        local datetime, is_checked = parse_reminder_line(line)
+
+        if datetime and (all_reminders or not is_checked) then
+            add_reminder(file_path, i, line, datetime, upcoming, all_reminders)
         end
     end
 end
@@ -56,6 +72,7 @@ function M.scan_paths(paths)
         end
     end
 end
+
 -- Function to scan all configured paths for upcoming reminders
 function M.scan_paths_upcoming(paths)
     M.reminders = {}  -- Clear the list before scanning

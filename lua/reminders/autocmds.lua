@@ -1,5 +1,4 @@
 -- lua/reminders/autocmds.lua
-
 local M = {}
 
 local time_parser = require('reminders.time_parser')
@@ -15,14 +14,22 @@ local function convert_to_iso8601(text)
     end
 end
 
--- Function to process the reminder line and convert it to ISO 8601
+-- Function to process the reminder line and convert it to ISO 8601 and add checkbox
 local function process_reminder_line(line)
     local new_line = line:gsub("#reminder (.+):", function(match)
         local iso_time = convert_to_iso8601(match)
-        if iso_time then
-            return "#reminder " .. iso_time .. ":"
+        local reminder_prefix = "#reminder "
+
+        -- Add the ISO time if parsed successfully, otherwise keep original text
+        local time_part = iso_time and iso_time or match
+
+        -- Check if there's a checkbox after the colon
+        local checkbox_pattern = ": ?%[[ xX]?%]"
+        if not line:match(checkbox_pattern) then
+            -- If no checkbox exists, insert one
+            return reminder_prefix .. time_part .. ": [ ]"
         else
-            return "#reminder " .. match .. ":"
+            return reminder_prefix .. time_part .. ":"
         end
     end)
 
