@@ -32,6 +32,192 @@ function M.parse_tomorrow()
     return os.date("!%Y-%m-%dT00:00:00Z", tomorrow)
 end
 
+-- Function to parse "on  at 11:00am"
+function M.parse_full_date_time(expression)
+    -- Patterns to match different date and time formats
+    local patterns = {
+        -- Date with time and am/pm (e.g., "11/1/24 9am")
+        {"^%s*(%d+)%/(%d+)%/(%d+)%s+(%d+):(%d+)([ap]m)%s*$", {"month_str", "day_str", "year_str", "hour_str", "minute_str", "ampm"}},
+        {"^%s*(%d+)%/(%d+)%/(%d+)%s+(%d+)([ap]m)%s*$", {"month_str", "day_str", "year_str", "hour_str", "ampm"}},
+        -- Date with time in 24-hour format (e.g., "9/30/2024 8:15")
+        {"^%s*(%d+)%/(%d+)%/(%d+)%s+(%d+):(%d+)%s*$", {"month_str", "day_str", "year_str", "hour_str", "minute_str"}},
+        {"^%s*(%d+)%/(%d+)%/(%d+)%s+(%d+)%s*$", {"month_str", "day_str", "year_str", "hour_str"}},
+        -- Date only (e.g., "10/01/2024")
+        {"^%s*(%d+)%/(%d+)%/(%d+)%s*$", {"month_str", "day_str", "year_str"}},
+    }
+
+    for _, pattern_info in ipairs(patterns) do
+        local pattern = pattern_info[1]
+        local captures = pattern_info[2]
+        local match = {string.match(expression, pattern)}
+        if #match > 0 then
+            local data = {}
+            for i, capture_name in ipairs(captures) do
+                data[capture_name] = match[i]
+            end
+
+            local month_str = data.month_str
+            local day_str = data.day_str
+            local year_str = data.year_str
+            local hour_str = data.hour_str or "0"
+            local minute_str = data.minute_str or "0"
+            local ampm = data.ampm
+
+            local month = tonumber(month_str)
+            local day = tonumber(day_str)
+            local year = tonumber(year_str)
+            local hour = tonumber(hour_str)
+            local minute = tonumber(minute_str)
+
+            -- Adjust year: if year is two digits, assume it's 2000+
+            if year < 100 then
+                year = year + 2000
+            end
+
+            -- Adjust hour based on am/pm if provided
+            if ampm then
+                ampm = ampm:lower()
+                if ampm == "pm" and hour ~= 12 then
+                    hour = hour + 12
+                elseif ampm == "am" and hour == 12 then
+                    hour = 0
+                end
+            end
+
+            -- Validate date components
+            if month < 1 or month > 12 or day < 1 or day > 31 then
+                return nil  -- Invalid date
+            end
+
+            -- Construct the target time in UTC
+            local target_time = os.time({
+                year = year,
+                month = month,
+                day = day,
+                hour = hour,
+                min = minute,
+                sec = 0,
+                isdst = false
+            })
+
+            -- Ensure the time is valid
+            if target_time then
+                return os.date("!%Y-%m-%dT%H:%M:%SZ", target_time)
+            end
+        end
+    end
+
+    return nil
+end
+
+-- Function to parse "on Monday at 11:00am"
+function M.parse_on_weekday_at_time(expression)
+    local days_of_week = {
+        sunday = 1,
+        monday = 2,
+        tuesday = 3,
+        wednesday = 4,
+        thursday = 5,
+        friday = 6,
+        saturday = 7,
+    }
+
+    -- List of patterns to match different expressions
+    local patterns = {
+        -- With 'on' and 'at', with time and am/pm
+        {"^on%s+(%a+)%s+at%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
+        {"^on%s+(%a+)%s+at%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
+        {"^on%s+(%a+)%s+at%s+(%d+):(%d+)%s*$", {"day_str", "hour_str", "minute_str"}},
+        {"^on%s+(%a+)%s+at%s+(%d+)%s*$", {"day_str", "hour_str"}},
+        -- Without 'at', directly time after day
+        {"^on%s+(%a+)%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
+        {"^on%s+(%a+)%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
+        {"^on%s+(%a+)%s+(%d+)%s*$", {"day_str", "hour_str"}},
+        -- With 'next' keyword
+        {"^next%s+(%a+)%s+at%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
+        {"^next%s+(%a+)%s+at%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
+        {"^next%s+(%a+)%s+at%s+(%d+):(%d+)%s*$", {"day_str", "hour_str", "minute_str"}},
+        {"^next%s+(%a+)%s+at%s+(%d+)%s*$", {"day_str", "hour_str"}},
+        {"^next%s+(%a+)%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
+        {"^next%s+(%a+)%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
+        {"^next%s+(%a+)%s+(%d+)%s*$", {"day_str", "hour_str"}},
+        -- Without 'on' or 'next'
+        {"^(%a+)%s+at%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
+        {"^(%a+)%s+at%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
+        {"^(%a+)%s+at%s+(%d+)%s*$", {"day_str", "hour_str"}},
+        {"^(%a+)%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
+        {"^(%a+)%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
+        {"^(%a+)%s+(%d+)%s*$", {"day_str", "hour_str"}},
+    }
+
+    -- Iterate over each pattern
+    for _, pattern_info in ipairs(patterns) do
+        local pattern = pattern_info[1]
+        local captures = pattern_info[2]
+        local match = {string.match(expression, pattern)}
+        if #match > 0 then
+            local data = {}
+            for i, capture_name in ipairs(captures) do
+                data[capture_name] = match[i]
+            end
+
+            local day_str = data.day_str
+            local hour_str = data.hour_str
+            local minute_str = data.minute_str or "0"
+            local ampm = data.ampm
+
+            if day_str and hour_str then
+                local target_wday = days_of_week[day_str:lower()]
+                if not target_wday then
+                    return nil
+                end
+
+                local hour = tonumber(hour_str)
+                local minute = tonumber(minute_str)
+
+                -- Adjust hour based on am/pm if provided
+                if ampm then
+                    ampm = ampm:lower()
+                    if ampm == "pm" and hour ~= 12 then
+                        hour = hour + 12
+                    elseif ampm == "am" and hour == 12 then
+                        hour = 0
+                    end
+                end
+
+                -- Get the current UTC time
+                local now = os.time()
+                local now_utc = os.date("!*t", now)
+
+                -- Determine if 'next' was in the expression
+                local is_next = expression:lower():find("^%s*on%s+next%s+") or expression:lower():find("^%s*next%s+")
+
+                -- Calculate days ahead
+                local days_ahead = (target_wday - now_utc.wday + 7) % 7
+                if days_ahead == 0 then
+                    if is_next or (hour < now_utc.hour or (hour == now_utc.hour and minute <= now_utc.min)) then
+                        days_ahead = 7  -- Move to next week if time has already passed today
+                    end
+                end
+
+                -- Construct the target time
+                local target_time = os.time({
+                    year = now_utc.year,
+                    month = now_utc.month,
+                    day = now_utc.day + days_ahead,
+                    hour = hour,
+                    min = minute,
+                    sec = 0,
+                    isdst = false
+                })
+
+                return os.date("!%Y-%m-%dT%H:%M:%SZ", target_time)
+            end
+        end
+    end
+
+    return nil
+end
 -- Function to parse "next Monday"
 function M.parse_next_weekday(expression)
     local days_of_week = {
@@ -60,7 +246,9 @@ end
 function M.parse(expression)
     return M.parse_time_expression(expression)
         or (expression == "tomorrow" and M.parse_tomorrow())
+        or M.parse_on_weekday_at_time(expression)
         or M.parse_next_weekday(expression)
+        or M.parse_full_date_time(expression)
 end
 
 function M.time_until(datetime)
