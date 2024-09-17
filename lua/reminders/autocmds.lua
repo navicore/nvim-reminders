@@ -16,7 +16,8 @@ end
 
 -- Function to process the reminder line and convert it to ISO 8601 and add checkbox
 local function process_reminder_line(line)
-    local new_line = line:gsub("#reminder (.+):", function(match)
+    -- Match the part after "#reminder" until the first colon, non-greedily
+    local new_line = line:gsub("#reminder ([^:]+):", function(match)
         local iso_time = convert_to_iso8601(match)
         local reminder_prefix = "#reminder "
 
