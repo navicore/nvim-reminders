@@ -53,11 +53,13 @@ end
 local function calculate_max_widths(reminders)
     local max_text_width = 0
     local max_path_width = 0
+    local max_width_limit = 40
+
     for _, reminder in ipairs(reminders) do
         local short_path = fn.pathshorten(fn.fnamemodify(reminder.file, ":~:."))
         local reminder_text = reminder.text:match(":(.*)$") or reminder.text
-        max_text_width = math.max(max_text_width, #reminder_text)
-        max_path_width = math.max(max_path_width, #short_path)
+        max_text_width = math.min(max_width_limit, math.max(max_text_width, #reminder_text))
+        max_path_width = math.min(max_width_limit, math.max(max_path_width, #short_path))
     end
     return max_text_width, max_path_width
 end
