@@ -9,7 +9,9 @@ M.reminders = {}
 local function parse_reminder_line(line)
     local datetime = line:match("#reminder (%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)")
     local is_checked = line:match(": ?%[x%]")
-    return datetime, is_checked
+    -- match #reminder inclusive
+    local reminder = line:match("%#reminder.*")
+    return reminder, datetime, is_checked
 end
 
 -- Function to determine if a reminder is upcoming
@@ -54,10 +56,10 @@ end
 local function scan_file(file_path, upcoming, all_reminders)
     local lines = vim.fn.readfile(file_path)
     for i, line in ipairs(lines) do
-        local datetime, is_checked = parse_reminder_line(line)
+        local reminder, datetime, is_checked = parse_reminder_line(line)
 
         if datetime and (all_reminders or not is_checked) then
-            add_reminder(file_path, i, line, datetime, upcoming, all_reminders)
+            add_reminder(file_path, i, reminder, datetime, upcoming, all_reminders)
         end
     end
 end
