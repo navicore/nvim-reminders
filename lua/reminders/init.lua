@@ -69,9 +69,18 @@ local function format_reminder(reminder, max_text_width, max_path_width, i)
     local icon = has_devicons and devicons.get_icon(reminder.file, fn.fnamemodify(reminder.file, ":e")) or "📄"
     local relative_time = reminder.datetime and time_parser.time_until(reminder.datetime) or ""
     local reminder_text = split_reminder_text(reminder.text)
-    local padded_text = string.format("%-" .. max_text_width .. "s", reminder_text)
+
+    -- Ensure the reminder_text is exactly 40 characters (truncate or pad)
+    if #reminder_text > 40 then
+        reminder_text = reminder_text:sub(1, 40) -- Truncate if longer than 40 chars
+    else
+        reminder_text = reminder_text .. string.rep(" ", 40 - #reminder_text) -- Pad if shorter than 40 chars
+    end
+
     local padded_path = string.format("%-" .. max_path_width .. "s", short_path)
-    local display_text = string.format("%s %s %s %s %s", i, icon, padded_path, padded_text, relative_time)
+    --local display_text = string.format("%s %s %s %s %s", i, icon, padded_path, reminder_text, relative_time)
+    --local display_text = string.format("%-3d | %s | %s | %s | %s", i, icon, padded_path, reminder_text, relative_time)
+    local display_text = string.format("%-3d %s %s %s | %s", i, icon, padded_path, reminder_text, relative_time)
     return display_text
 end
 
