@@ -91,9 +91,9 @@ function M.parse_full_date_time(expression)
 
             -- Construct the target time in UTC
             local target_time = os.time({
-                year = year,
-                month = month,
-                day = day,
+                year = tostring(year),
+                month = tostring(month),
+                day = tostring(day),
                 hour = hour,
                 min = minute,
                 sec = 0,
@@ -253,18 +253,18 @@ end
 
 function M.time_until(datetime)
     -- Extract components from the ISO 8601 string and convert them to strings or numbers as needed
-    local year = tostring(datetime:sub(1, 4))
-    local month = tostring(datetime:sub(6, 7))
-    local day = tostring(datetime:sub(9, 10))
+    local year = tonumber(datetime:sub(1, 4))
+    local month = tonumber(datetime:sub(6, 7))
+    local day = tonumber(datetime:sub(9, 10))
     local hour = tonumber(datetime:sub(12, 13))
     local min = tonumber(datetime:sub(15, 16))
     local sec = tonumber(datetime:sub(18, 19))
 
     -- Construct the reminder time as a UTC time
     local reminder_time = os.time({
-        year = year,
-        month = month,
-        day = day,
+        year = tostring(year),
+        month = tostring(month),
+        day = tostring(day),
         hour = hour,
         min = min,
         sec = sec,
@@ -272,15 +272,7 @@ function M.time_until(datetime)
     })
 
     -- Get the current time in UTC
-    local now = os.time({
-        year = tostring(os.date("!%Y")),
-        month = tostring(os.date("!%m")),
-        day = tostring(os.date("!%d")),
-        hour = tonumber(os.date("!%H")),
-        min = tonumber(os.date("!%M")),
-        sec = tonumber(os.date("!%S")),
-        isdst = false
-    })
+    local now = os.time()
 
     local diff = os.difftime(reminder_time, now)
 
@@ -304,19 +296,27 @@ function M.time_until(datetime)
 
     local minutes = math.floor(diff / time_units.minute.seconds)
 
+    local function pluralize(value, unit)
+        if value == 1 then
+            return value .. " " .. unit.single
+        elseif value > 1 then
+            return value .. " " .. unit.plural
+        end
+    end
+
     if years > 0 then
-        return is_past and (years .. " years ago") or ("in " .. years .. " years")
+        return is_past and (pluralize(years, time_units.year) .. " ago") or ("in " .. pluralize(years, time_units.year))
     elseif months > 0 then
-        return is_past and (months .. " months ago") or ("in " .. months .. " months")
+        return is_past and (pluralize(months, time_units.month) .. " ago") or ("in " .. pluralize(months, time_units.month))
     elseif weeks > 0 then
-        return is_past and (weeks .. " weeks ago") or ("in " .. weeks .. " weeks")
+        return is_past and (pluralize(weeks, time_units.week) .. " ago") or ("in " .. pluralize(weeks, time_units.week))
     elseif days >= 2 then
-        return is_past and (days .. " days ago") or ("in " .. days .. " days")
+        return is_past and (pluralize(days, time_units.day) .. " ago") or ("in " .. pluralize(days, time_units.day))
     else
         local parts = {}
-        if days > 0 then table.insert(parts, days .. " days") end
-        if hours > 0 then table.insert(parts, hours .. " hours") end
-        if minutes > 0 then table.insert(parts, minutes .. " minutes") end
+        if days > 0 then table.insert(parts, pluralize(days, time_units.day)) end
+        if hours > 0 then table.insert(parts, pluralize(hours, time_units.hour)) end
+        if minutes > 0 then table.insert(parts, pluralize(minutes, time_units.minute)) end
 
         if #parts == 0 then
             return is_past and "just now" or "in a moment"
