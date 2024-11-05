@@ -185,9 +185,8 @@ function M.parse_on_weekday_at_time(expression)
                     end
                 end
 
-                -- Get the current UTC time
-                local now = os.time()
-                local now_utc = os.date("!*t", now)
+                -- Construct the UTC timestamp manually
+                local now_utc = os.date("!*t")
 
                 -- Determine if 'next' was in the expression
                 local is_next = expression:lower():find("^%s*on%s+next%s+") or expression:lower():find("^%s*next%s+")
@@ -271,8 +270,16 @@ function M.time_until(datetime)
         isdst = false  -- Disable daylight saving time adjustments
     })
 
-    -- Get the current time in UTC
-    local now = os.time()
+    local now_utc = os.date("!*t")
+    local now = os.time({
+        year = now_utc.year,
+        month = now_utc.month,
+        day = now_utc.day,
+        hour = now_utc.hour,
+        min = now_utc.min,
+        sec = now_utc.sec,
+        isdst = false
+    })
 
     local diff = os.difftime(reminder_time, now)
 
