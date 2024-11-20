@@ -10,8 +10,8 @@ local function parse_reminder_line(line)
     -- Extract the datetime in ISO 8601 format
     local datetime = line:match("#reminder (%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)")
 
-    -- Check for both new and old style checkboxes
-    local is_checked = line:match("^%* %[%s?[xX]%s?%]") ~= nil or line:match(": ?%[x%]") ~= nil
+    -- Check for both new and old style checkboxes, anywhere in the line
+    local is_checked = line:match("%* %[%s?[xX]%s?%]") ~= nil or line:match(": ?%[x%]") ~= nil
 
     -- Extract the full reminder line including #reminder
     local reminder = line:match("%#reminder.*")

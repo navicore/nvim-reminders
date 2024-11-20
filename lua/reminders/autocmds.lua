@@ -16,20 +16,22 @@ end
 
 -- Function to process the reminder line, rewrite time to ISO 8601, and ensure markdown prefix
 local function process_reminder_line(line)
-    local new_line = line:gsub("(#reminder) ([^:]+):", function(reminder_prefix, time_expr)
-        local iso_time = convert_to_iso8601(time_expr)
-        local time_part = iso_time and iso_time or time_expr
-
-        -- Ensure the line starts with the markdown checkbox prefix
-        if not line:match("^%* %[%s?[ xX]?%s?%]") then
-            return "* [ ] " .. reminder_prefix .. " " .. time_part .. ":"
-        else
-            -- Rewrite the time but keep the existing checkbox
+    -- Check if the line already contains a prefixed #reminder
+    if line:match("%* %[%s?[ xX]?%s?%] #reminder") then
+        -- Rewrite time for an existing prefixed #reminder
+        return line:gsub("(#reminder) ([^:]+):", function(reminder_prefix, time_expr)
+            local iso_time = convert_to_iso8601(time_expr)
+            local time_part = iso_time and iso_time or time_expr
             return reminder_prefix .. " " .. time_part .. ":"
-        end
-    end)
-
-    return new_line
+        end)
+    else
+        -- Insert the prefix before the first occurrence of #reminder
+        return line:gsub("(#reminder) ([^:]+):", function(reminder_prefix, time_expr)
+            local iso_time = convert_to_iso8601(time_expr)
+            local time_part = iso_time and iso_time or time_expr
+            return "* [ ] " .. reminder_prefix .. " " .. time_part .. ":"
+        end)
+    end
 end
 
 -- Function to process the current file
