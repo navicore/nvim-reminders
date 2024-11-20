@@ -5,12 +5,17 @@ local time_parser = require('reminders.time_parser')
 -- A list to store reminders that are due or past
 M.reminders = {}
 
--- Function to parse a line for a reminder and return datetime, is_checked, and line number
+-- Function to parse a line for a reminder and return reminder, datetime, is_checked
 local function parse_reminder_line(line)
+    -- Extract the datetime in ISO 8601 format
     local datetime = line:match("#reminder (%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)")
-    local is_checked = line:match(": ?%[x%]")
-    -- match #reminder inclusive
+
+    -- Check for both new and old style checkboxes
+    local is_checked = line:match("^%* %[%s?[xX]%s?%]") ~= nil or line:match(": ?%[x%]") ~= nil
+
+    -- Extract the full reminder line including #reminder
     local reminder = line:match("%#reminder.*")
+
     return reminder, datetime, is_checked
 end
 

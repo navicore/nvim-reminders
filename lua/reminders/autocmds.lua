@@ -14,23 +14,18 @@ local function convert_to_iso8601(text)
     end
 end
 
--- Function to process the reminder line and convert it to ISO 8601 and add checkbox
+-- Function to process the reminder line, rewrite time to ISO 8601, and ensure markdown prefix
 local function process_reminder_line(line)
-    -- Match the part after "#reminder" until the first colon, non-greedily
-    local new_line = line:gsub("#reminder ([^:]+):", function(match)
-        local iso_time = convert_to_iso8601(match)
-        local reminder_prefix = "#reminder "
+    local new_line = line:gsub("(#reminder) ([^:]+):", function(reminder_prefix, time_expr)
+        local iso_time = convert_to_iso8601(time_expr)
+        local time_part = iso_time and iso_time or time_expr
 
-        -- Add the ISO time if parsed successfully, otherwise keep original text
-        local time_part = iso_time and iso_time or match
-
-        -- Check if there's a checkbox after the colon
-        local checkbox_pattern = ": ?%[[ xX]?%]"
-        if not line:match(checkbox_pattern) then
-            -- If no checkbox exists, insert one
-            return reminder_prefix .. time_part .. ": [ ]"
+        -- Ensure the line starts with the markdown checkbox prefix
+        if not line:match("^%* %[%s?[ xX]?%s?%]") then
+            return "* [ ] " .. reminder_prefix .. " " .. time_part .. ":"
         else
-            return reminder_prefix .. time_part .. ":"
+            -- Rewrite the time but keep the existing checkbox
+            return reminder_prefix .. " " .. time_part .. ":"
         end
     end)
 
