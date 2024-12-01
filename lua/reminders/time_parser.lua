@@ -26,12 +26,6 @@ function M.parse_time_expression(expression)
     end
 end
 
--- Function to parse "tomorrow"
-function M.parse_tomorrow()
-    local tomorrow = os.time() + time_units.day.seconds
-    return os.date("!%Y-%m-%dT00:00:00Z", tomorrow)
-end
-
 -- Function to parse "on  at 11:00am"
 function M.parse_full_date_time(expression)
     -- Patterns to match different date and time formats
@@ -241,13 +235,72 @@ function M.parse_next_weekday(expression)
     end
 end
 
+-- Function to parse "today at X" or "tomorrow at X"
+function M.parse_specific_day_with_time(expression)
+    -- Match patterns like "today at 6:30am" or "tomorrow at 6am"
+    local patterns = {
+        {"^(today)%s+at%s+(%d+):(%d+)([ap]m)$", {"day", "hour_str", "minute_str", "ampm"}}, -- HH:MM am/pm
+        {"^(today)%s+at%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}},                   -- HH am/pm
+        {"^(tomorrow)%s+at%s+(%d+):(%d+)([ap]m)$", {"day", "hour_str", "minute_str", "ampm"}}, -- HH:MM am/pm
+        {"^(tomorrow)%s+at%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}}                -- HH am/pm
+    }
+
+    for _, pattern_info in ipairs(patterns) do
+        local pattern = pattern_info[1]
+        local captures = pattern_info[2]
+        local match = {string.match(expression, pattern)}
+        if #match > 0 then
+            local data = {}
+            for i, capture_name in ipairs(captures) do
+                data[capture_name] = match[i]
+            end
+
+            local day = data.day
+            local hour_str = data.hour_str
+            local minute_str = data.minute_str or "0" -- Default to 0 minutes if not provided
+            local ampm = data.ampm
+
+            local hour = tonumber(hour_str)
+            local minute = tonumber(minute_str)
+
+            -- Adjust hour based on am/pm
+            if ampm then
+                ampm = ampm:lower()
+                if ampm == "pm" and hour ~= 12 then
+                    hour = hour + 12
+                elseif ampm == "am" and hour == 12 then
+                    hour = 0
+                end
+            end
+
+            -- Determine the base date (today or tomorrow)
+            local base_time = os.time()
+            if day == "tomorrow" then
+                base_time = base_time + time_units.day.seconds
+            end
+
+            -- Get local time components for the base day
+            local local_time = os.date("*t", base_time)
+            local_time.hour = hour
+            local_time.min = minute
+            local_time.sec = 0
+
+            -- Convert to UTC and format as ISO 8601
+            local target_time = os.time(local_time)
+            return os.date("!%Y-%m-%dT%H:%M:%SZ", target_time)
+        end
+    end
+
+    return nil
+end
+
 -- Main function to parse any time expression
 function M.parse(expression)
     return M.parse_time_expression(expression)
-        or (expression == "tomorrow" and M.parse_tomorrow())
         or M.parse_on_weekday_at_time(expression)
         or M.parse_next_weekday(expression)
         or M.parse_full_date_time(expression)
+        or M.parse_specific_day_with_time(expression) -- Add the new function here
 end
 
 function M.time_until(datetime)

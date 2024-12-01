@@ -19,17 +19,17 @@ local function process_reminder_line(line)
     -- Check if the line already contains a prefixed #reminder
     if line:match("%* %[%s?[ xX]?%s?%] #reminder") then
         -- Rewrite time for an existing prefixed #reminder
-        return line:gsub("(#reminder) ([^:]+):", function(reminder_prefix, time_expr)
+        return line:gsub("(#reminder) (.+):(%s)", function(reminder_prefix, time_expr, _)
             local iso_time = convert_to_iso8601(time_expr)
             local time_part = iso_time and iso_time or time_expr
-            return reminder_prefix .. " " .. time_part .. ":"
+            return reminder_prefix .. " " .. time_part .. ": "
         end)
     else
         -- Insert the prefix before the first occurrence of #reminder
-        return line:gsub("(#reminder) ([^:]+):", function(reminder_prefix, time_expr)
+        return line:gsub("(#reminder) (.+):(%s)", function(reminder_prefix, time_expr, _)
             local iso_time = convert_to_iso8601(time_expr)
             local time_part = iso_time and iso_time or time_expr
-            return "* [ ] " .. reminder_prefix .. " " .. time_part .. ":"
+            return "* [ ] " .. reminder_prefix .. " " .. time_part .. ": "
         end)
     end
 end
