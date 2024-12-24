@@ -157,8 +157,12 @@ test locally by running editor command:
 
 or cli command:
 ```
+git clone --depth 1 https://github.com/nvim-lua/plenary.nvim ../plenary.nvim
 make
 ```
+The installation of plenary this way is weak.  TODO: have the `Makefile` lazily
+install plenary somewhere both the local use-case and CI can use it.
+
 Testing via cli is enabled by:
 
   1. `Makefile`
