@@ -156,9 +156,9 @@ make
 ```
 The tests are enabled by:
 
-    1. `Makefile`
-    2. `scripts/minimal_init.vim`
-    3. `tests/*spec.lua` files
+  1. `Makefile`
+  2. `scripts/minimal_init.vim`
+  3. `tests/*spec.lua` files
 
 ## Contributions
 
