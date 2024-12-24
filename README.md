@@ -147,18 +147,27 @@ And the plugin will display a virtual text next to it showing something like:
 #reminder 2024-08-25T14:00:00Z: Follow up on the meeting notes : in 2 hours
 ```
 
-## Notes on Unit Tests and CI
+## Unit Tests and CI
 
-test by running:
+test locally by running editor command:
 
+```
+:PlenaryBustedDirectory tests
+```
+
+or cli command:
 ```
 make
 ```
-The tests are enabled by:
+Testing via cli is enabled by:
 
   1. `Makefile`
   2. `scripts/minimal_init.vim`
   3. `tests/*spec.lua` files
+
+CI running tests is enabled by the above plus:
+
+  1. `.github/workflows/ci.yaml`
 
 ## Contributions
 
