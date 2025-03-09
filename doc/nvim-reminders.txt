@@ -39,15 +39,28 @@ Use 't' to toggle the sort order from oldest to newest and vice versa.
 ==============================================================================
 CONFIGURATION                                           *nvim-reminders-config*
 
-The nvim-reminders plugin can be configured by passing a configuration table
+The nvim-reminders plugin can be enabled by the `setup` function called your
+init.lua file:
+>
+  require('reminders').setup()
+
+The nvim-reminders plugin can be customized by passing a configuration table
 to the `setup` function in your init.lua file:
 
+`paths`: A list of paths to scan for and edit reminders
 >
   require('reminders').setup({
-    paths = { "~/path/to/your/reminders" }
+    paths = { "~/path/to/your/markdown/files" }
   })
 
-`paths`: A list of paths to scan for reminders
+`recursive_scan`: A boolean flag to indicate scan all sub directories when
+processing the `ReminderScan` and `ReminderScanUpcoming` commands.  Note,
+`ReminderScanAll` always scans recursively.
+>
+  require('reminders').setup({
+    recursive_scan = true
+  })
+
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

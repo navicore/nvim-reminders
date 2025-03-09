@@ -62,7 +62,6 @@ local function scan_file(file_path, upcoming, all_reminders)
     local lines = vim.fn.readfile(file_path)
     for i, line in ipairs(lines) do
         local reminder, datetime, is_checked = parse_reminder_line(line)
-
         if datetime and (all_reminders or not is_checked) then
             add_reminder(file_path, i, reminder, datetime, upcoming, all_reminders)
         end
@@ -71,9 +70,17 @@ end
 
 -- Function to scan all configured paths for due reminders
 function M.scan_paths(paths)
+
+    local recursive_scan = require('reminders').config.recursive_scan
+
     M.reminders = {}  -- Clear the list before scanning
     for _, path in ipairs(paths) do
-        local files = vim.fn.globpath(path, "**/*.md", false, true)
+        local files
+        if recursive_scan == true then
+            files = vim.fn.globpath(path, "**/*.md", false, true)
+        else
+            files = vim.fn.globpath(path, "*.md", false, true)
+        end
         for _, file in ipairs(files) do
             scan_file(file, false, false)  -- Pass false for upcoming and all_reminders
         end
@@ -82,9 +89,15 @@ end
 
 -- Function to scan all configured paths for upcoming reminders
 function M.scan_paths_upcoming(paths)
+    local recursive_scan = require('reminders').config.recursive_scan
     M.reminders = {}  -- Clear the list before scanning
     for _, path in ipairs(paths) do
-        local files = vim.fn.globpath(path, "**/*.md", false, true)
+        local files
+        if recursive_scan == true then
+            files = vim.fn.globpath(path, "**/*.md", false, true)
+        else
+            files = vim.fn.globpath(path, "*.md", false, true)
+        end
         for _, file in ipairs(files) do
             scan_file(file, true, false)  -- Pass true for upcoming and false for all_reminders
         end
@@ -95,6 +108,7 @@ end
 function M.scan_paths_all(paths)
     M.reminders = {}  -- Clear the list before scanning
     for _, path in ipairs(paths) do
+        -- always scan recursively for all reminders
         local files = vim.fn.globpath(path, "**/*.md", false, true)
         for _, file in ipairs(files) do
             scan_file(file, false, true)  -- Pass false for upcoming and true for all_reminders

@@ -65,7 +65,7 @@ function M.update_virtual_text()
 end
 
 -- Set up autocmds for markdown files in the configured paths
-function M.setup_autocmds(paths)
+function M.setup_autocmds()
     vim.cmd([[
         augroup Reminders
             autocmd!
