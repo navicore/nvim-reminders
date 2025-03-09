@@ -10,7 +10,6 @@ local sort_order = "newest_to_oldest"
 -- Table to store full reminder information
 M.full_reminders = {}
 
--- Function to create a floating window
 local function create_floating_window()
     local width = math.floor(vim.o.columns * 0.8)
     local height = math.floor(vim.o.lines * 0.8)
@@ -78,8 +77,6 @@ local function format_reminder(reminder, max_text_width, max_path_width, i)
     end
 
     local padded_path = string.format("%-" .. max_path_width .. "s", short_path)
-    --local display_text = string.format("%s %s %s %s %s", i, icon, padded_path, reminder_text, relative_time)
-    --local display_text = string.format("%-3d | %s | %s | %s | %s", i, icon, padded_path, reminder_text, relative_time)
     local display_text = string.format("%-3d %s %s %s | %s", i, icon, padded_path, reminder_text, relative_time)
     return display_text
 end
@@ -160,6 +157,83 @@ local function show_reminders()
     end
 end
 
+local function open_datetime_selector(line_nr)
+  local choices = {
+    "in 10 minutes",
+    "in 1 hour",
+    "in 2 hours",
+    "in 1 day",
+    "in 2 days",
+    "in 1 week",
+    "in 2 weeks",
+    "in 1 month",
+    "quit"
+  }
+
+  local function on_choice(choice)
+    M.save_datetime(line_nr, choice)
+  end
+
+  vim.ui.select(choices, { prompt = "Select a time interval:" }, on_choice)
+
+end
+
+local function calculate_new_datetime(choice)
+    local current_time = os.time()
+    local new_time
+
+    if choice == "in 10 minutes" then
+        new_time = current_time + 10 * 60
+    elseif choice == "in 1 hour" then
+        new_time = current_time + 1 * 60 * 60
+    elseif choice == "in 2 hours" then
+        new_time = current_time + 2 * 60 * 60
+    elseif choice == "in 1 day" then
+        new_time = current_time + 24 * 60 * 60
+    elseif choice == "in 2 days" then
+        new_time = current_time + 2 * 24 * 60 * 60
+    elseif choice == "in 1 week" then
+        new_time = current_time + 7 * 24 * 60 * 60
+    elseif choice == "in 2 weeks" then
+        new_time = current_time + 14 * 24 * 60 * 60
+    elseif choice == "in 1 month" then
+        new_time = os.time{year=os.date("*t").year, month=os.date("*t").month + 1, day=os.date("*t").day}
+    else
+        return nil
+    end
+
+    return os.date("!%Y-%m-%dT%H:%M:%SZ", new_time)
+end
+
+local function update_reminder_datetime(line, new_datetime)
+    return line:gsub("(%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ)", new_datetime)
+end
+
+function M.save_datetime(line_nr, choice)
+    if not choice then
+        print("Invalid choice. Not updating.")
+        return
+    end
+
+    local line = vim.api.nvim_buf_get_lines(0, line_nr - 1, line_nr, false)[1]
+
+    if not M.is_reminder(line) then
+        print("Not a reminder line. Not updating.")
+        return
+    end
+
+    local new_datetime = calculate_new_datetime(choice)
+
+    if not new_datetime then
+        print("Failed to calculate new datetime.")
+        return
+    end
+
+    local new_line = update_reminder_datetime(line, new_datetime)
+
+    vim.api.nvim_buf_set_lines(0, line_nr - 1, line_nr, false, { new_line })
+end
+
 function M.toggle_sort_order()
     if sort_order == "newest_to_oldest" then
         sort_order = "oldest_to_newest"
@@ -171,7 +245,6 @@ function M.toggle_sort_order()
     show_reminders()
 end
 
--- Function to scan for reminders and display them
 function M.scan_reminders(upcoming)
     if upcoming then
         reminder_list.scan_paths_upcoming(M.config.paths)
@@ -181,7 +254,6 @@ function M.scan_reminders(upcoming)
     show_reminders()
 end
 
--- Function to open reminder item from the floating window
 function M.open_reminder_item()
     local current_line = api.nvim_win_get_cursor(0)[1]
     local reminder = M.full_reminders[current_line]
@@ -198,16 +270,30 @@ function M.open_reminder_item()
     end
 end
 
--- Set up the user command
+-- Set up the user commands
 api.nvim_create_user_command('ReminderScan', function()
     M.scan_reminders(false)
 end, { })
+
 api.nvim_create_user_command('ReminderScanUpcoming', function()
     M.scan_reminders(true)
 end, { })
+
 api.nvim_create_user_command('ReminderScanAll', function()
     reminder_list.scan_paths_all(M.config.paths)
     show_reminders()
+end, {})
+
+vim.api.nvim_create_user_command('ReminderEdit', function()
+    local line = vim.api.nvim_get_current_line()
+    if not M.is_reminder(line) then
+        print("Not a reminder line")
+        return
+    end
+
+    local line_nr = vim.api.nvim_win_get_cursor(0)[1]
+
+    open_datetime_selector(line_nr)
 end, {})
 
 -- Plugin setup function
@@ -220,6 +306,10 @@ function M.setup(user_config)
     end
     -- Set up autocmds for markdown files in the configured paths
     require('reminders.autocmds').setup_autocmds(M.config.paths)
+end
+
+function M.is_reminder(line)
+    return line:match("#reminder")
 end
 
 return M
