@@ -93,11 +93,17 @@ saved it.
 
 for example:
 
-This reminder: #reminder in 2 minutes: this is a test reminder!
+This reminder: 
 
-Becomes: #reminder 2024-09-14T04:34:31Z: [ ] this is a test reminder!
+#reminder in 2 minutes: this is a test reminder!
 
-Once you resolve it by checking the checkbox it becomes: #reminder 2024-09-14T04:34:31Z: [x] this is a test reminder!
+Becomes:
+
+* [ ] #reminder 2024-09-14T04:34:31Z: this is a test reminder!
+
+Once you resolve it by checking the checkbox it becomes:
+
+* [x] #reminder 2024-09-14T04:34:31Z: this is a test reminder!
 
 ### Customizing the Repository List
 
@@ -113,6 +119,22 @@ require('reminders').setup({
     }
 })
 ```
+
+### Customizing the File Scanning
+
+Normally, if you have a lot of notes that you archive to sub directories you don't
+want to keep scanning those previous years of notes for reminders.  The default
+is that the plugin will not scan sub directories of your notes paths.
+
+However, if you do want to scan sub directories for reminders, use the
+`scan_recursively` setting.
+
+```lua
+require('reminders').setup({
+    scan_recursively = true
+})
+```
+
 
 ### Supported Time Expressions
 
