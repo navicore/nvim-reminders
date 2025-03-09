@@ -18,6 +18,7 @@ configured paths.
 ==============================================================================
 COMMANDS                                                *nvim-reminders-commands*
 
+:ReminderEdit             Edit the reminder with a date picker
 :ReminderScan             Scan for due reminders
 :ReminderScanUpcoming     Scan for upcoming reminders within the next 7 days
 :ReminderScanAll          Scan for all reminders, both past and future

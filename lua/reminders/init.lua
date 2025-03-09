@@ -36,8 +36,8 @@ local function split_reminder_text(text)
     end
 end
 
-local function sort_reminders(reminders, sort_order)
-    if sort_order == "newest_to_oldest" then
+local function sort_reminders(reminders, order)
+    if order == "newest_to_oldest" then
         table.sort(reminders, function(a, b)
             return (a.datetime or 0) > (b.datetime or 0)
         end)
@@ -158,24 +158,38 @@ local function show_reminders()
 end
 
 local function open_datetime_selector(line_nr)
-  local choices = {
-    "in 10 minutes",
-    "in 1 hour",
-    "in 2 hours",
-    "in 1 day",
-    "in 2 days",
-    "in 1 week",
-    "in 2 weeks",
-    "in 1 month",
-    "quit"
-  }
+    local choices = {
+        "in 10 minutes",
+        "in 1 hour",
+        "in 2 hours",
+        "in 1 day",
+        "in 2 days",
+        "in 1 week",
+        "in 2 weeks",
+        "in 1 month",
+        "quit"
+    }
 
-  local function on_choice(choice)
-    M.save_datetime(line_nr, choice)
-  end
-
-  vim.ui.select(choices, { prompt = "Select a time interval:" }, on_choice)
-
+    require('telescope.pickers').new({}, {
+        prompt_title = "Select a time interval",
+        finder = require('telescope.finders').new_table {
+            results = choices
+        },
+        sorter = require('telescope.config').values.generic_sorter({}),
+        layout_config = {
+            width = 0.3,  -- Adjust the width to 60% of the editor's width
+        },
+        attach_mappings = function(prompt_bufnr, map)
+            map('i', '<CR>', function()
+                local selection = require('telescope.actions.state').get_selected_entry()
+                require('telescope.actions').close(prompt_bufnr)
+                if selection[1] ~= "quit" then
+                    M.save_datetime(line_nr, selection[1])
+                end
+            end)
+            return true
+        end,
+    }):find()
 end
 
 local function calculate_new_datetime(choice)
