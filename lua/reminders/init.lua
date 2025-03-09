@@ -313,13 +313,17 @@ end, {})
 -- Plugin setup function
 function M.setup(user_config)
     M.config = {
-        paths = { fn.expand("~/git/" .. io.popen("whoami"):read("*a"):gsub("\n", "") .. "/zet") }
+        paths = { fn.expand("~/git/" .. io.popen("whoami"):read("*a"):gsub("\n", "") .. "/zet") },
+        recursive_scan = false
     }
     if user_config and user_config.paths then
         M.config.paths = user_config.paths
     end
+    if user_config and user_config.recursive_scan then
+        M.config.recursive_scan = user_config.recursive_scan
+    end
     -- Set up autocmds for markdown files in the configured paths
-    require('reminders.autocmds').setup_autocmds(M.config.paths)
+    require('reminders.autocmds').setup_autocmds()
 end
 
 function M.is_reminder(line)
