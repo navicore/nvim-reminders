@@ -365,11 +365,11 @@ function M.time_until(datetime)
     end
 
     if years > 0 then
-        return is_past and (pluralize(years, time_units.year) .. " ago") or ("in " .. pluralize(years, time_units.year))
+        return is_past and (pluralize(years, time_units.year) .. " ago") or ("in over " .. pluralize(years, time_units.year))
     elseif months > 0 then
-        return is_past and (pluralize(months, time_units.month) .. " ago") or ("in " .. pluralize(months, time_units.month))
+        return is_past and (pluralize(months, time_units.month) .. " ago") or ("in over " .. pluralize(months, time_units.month))
     elseif weeks > 0 then
-        return is_past and (pluralize(weeks, time_units.week) .. " ago") or ("in " .. pluralize(weeks, time_units.week))
+        return is_past and (pluralize(weeks, time_units.week) .. " ago") or ("in over " .. pluralize(weeks, time_units.week))
     elseif days >= 2 then
         return is_past and (pluralize(days, time_units.day) .. " ago") or ("in " .. pluralize(days, time_units.day))
     else
