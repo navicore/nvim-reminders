@@ -354,6 +354,7 @@ vim.api.nvim_create_user_command("ReminderTmuxSetup", function()
 	local script_path = debug.getinfo(1, "S").source:sub(2)
 	local plugin_root = fn.fnamemodify(script_path, ":h:h:h")
 	local tmux_script = plugin_root .. "/scripts/tmux-reminders.sh"
+	local popup_script = plugin_root .. "/scripts/tmux-reminder-popup.sh"
 
 	-- Build the paths argument string from config
 	local paths_arg = ""
@@ -370,18 +371,21 @@ vim.api.nvim_create_user_command("ReminderTmuxSetup", function()
 		"nvim-reminders tmux integration",
 		string.rep("=", 40),
 		"",
-		"Script path:",
-		"  " .. tmux_script,
-		"",
-		"Add to your tmux.conf status-right:",
+		"STATUS BAR (show reminder count):",
 		"",
 		"  #(" .. tmux_script .. " " .. paths_arg .. ")",
 		"",
-		"Simple example:",
+		"Simple status-right example:",
 		"",
 		[[  set -g status-right '#(]] .. tmux_script .. " " .. paths_arg .. [[) %H:%M']],
 		"",
-		"See :help nvim-reminders-tmux for advanced styling with powerline glyphs.",
+		string.rep("-", 40),
+		"",
+		"POPUP (prefix + r to open ReminderScan):",
+		"",
+		"  bind r run-shell '" .. popup_script .. "'",
+		"",
+		"See :help nvim-reminders-tmux for advanced styling.",
 		"",
 	}
 
