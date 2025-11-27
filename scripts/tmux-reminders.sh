@@ -8,6 +8,12 @@
 # Example in tmux.conf:
 #   set -g status-right '#(/path/to/tmux-reminders.sh ~/notes ~/zet)'
 #
+# Click support: clicking the reminder count opens ReminderScan in a popup
+#
+
+# Get the directory where this script lives (to find popup script)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+POPUP_SCRIPT="$SCRIPT_DIR/tmux-reminder-popup.sh"
 
 if [[ $# -eq 0 ]]; then
     echo "Usage: tmux-reminders.sh <path1> [path2] ..." >&2
@@ -53,11 +59,15 @@ for dir in "$@"; do
     done
 done
 
-# Output for tmux
+# Output for tmux with click support
+# Uses range=user|reminder to mark clickable region
+# Requires this bind in tmux.conf:
+#   bind -Troot MouseDown1Status if -F '#{==:#{mouse_status_range},reminder}' { run-shell '/path/to/tmux-reminder-popup.sh' }
 if [[ "$count" -gt 0 ]]; then
     if [[ "$count" -eq 1 ]]; then
-        echo "#[fg=#131a24,bg=#f7768e,bold] $count reminder #[fg=#f7768e,bg=#131a24]"
+        label=" $count reminder "
     else
-        echo "#[fg=#131a24,bg=#f7768e,bold] $count reminders #[fg=#f7768e,bg=#131a24]"
+        label=" $count reminders "
     fi
+    echo "#[fg=#131a24,bg=#f7768e,bold]#[range=user|reminder]${label}#[norange]#[fg=#f7768e,bg=#131a24]"
 fi

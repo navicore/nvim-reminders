@@ -21,6 +21,9 @@ ready for them.
 * Displays a human-readable countdown in virtual text.
 * Rewrites reminders with check-boxes
 * Supports configurable repository lists to scan for reminders.
+* **Telescope integration** with preview pane for context-aware reminder browsing
+* **Snooze reminders** directly from the picker with `e` key
+* **Tmux integration** with clickable status bar count and popup support
 
 ## Installation
 
@@ -86,10 +89,16 @@ Create reminders in your `*.md` files as:
 #reminder in 2 hours: check logs for errors
 ```
 
-and when you are ready for a quickfix list of reminders run `:ReminderScan`. Hit
-<ENTER> on the reminder you want to address and to resolve it check the
-check-box with an 'x', ie: [x] that was inserted into your reminder when you
-saved it.
+and when you are ready run `:ReminderScan`. This opens a Telescope picker with
+a preview pane showing the file context for each reminder.
+
+**Picker keybindings:**
+- `<CR>` - Jump to the reminder in its file
+- `e` (normal mode) - Snooze the reminder (opens time picker, then refreshes list)
+- `<Esc>` - Enter normal mode
+- `<C-c>` - Close picker
+
+To resolve a reminder, jump to it and check the checkbox with an 'x': `[x]`
 
 for example:
 
@@ -171,29 +180,46 @@ And the plugin will display a virtual text next to it showing something like:
 
 ## Tmux Integration
 
-The plugin includes a shell script that counts due reminders for display in your
-tmux status bar. When reminders are due, you'll see a notification in your tmux
-status line - a gentle nudge to run `:ReminderScan`.
+The plugin includes shell scripts for tmux integration:
+- **Status bar count** - Shows due reminder count (clickable!)
+- **Popup window** - Opens ReminderScan in a floating tmux popup without disrupting your panes
 
 ### Quick Setup
 
-Run `:ReminderTmuxSetup` in Neovim to get a copy-paste ready configuration
-snippet with the correct paths for your setup.
+Run `:ReminderTmuxSetup` in Neovim to get copy-paste ready configuration
+snippets with the correct paths for your setup.
 
-### Manual Setup
+### Status Bar
 
-The script is located at `scripts/tmux-reminders.sh` in the plugin directory.
-It requires paths as arguments:
-
-```bash
-/path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes ~/zet
-```
-
-Add to your `tmux.conf`:
+Add the reminder count to your status bar. The script outputs nothing when no
+reminders are due, and shows a red highlighted count when reminders need attention.
 
 ```tmux
 set -g status-right '#(/path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes) %H:%M'
 ```
+
+### Popup with Keybinding
+
+Open ReminderScan in a tmux popup with `prefix + r`:
+
+```tmux
+bind r run-shell '/path/to/nvim-reminders/scripts/tmux-reminder-popup.sh'
+```
+
+The popup opens nvim with the Telescope picker, and closes automatically when
+you quit nvim - your panes stay untouched underneath.
+
+### Click Support
+
+Make the status bar reminder count clickable (requires tmux 3.0+):
+
+```tmux
+bind -Troot MouseDown1Status if -F '#{==:#{mouse_status_range},reminder}' \
+  { run-shell '/path/to/nvim-reminders/scripts/tmux-reminder-popup.sh' } \
+  { select-window -t = }
+```
+
+Now clicking the red "2 reminders" text opens the popup directly!
 
 ### Advanced Styling (Powerline)
 
@@ -204,16 +230,25 @@ scheme:
 set -g status-right "#[fg=#131a24,bg=#131a24,nobold,nounderscore,noitalics]#[fg=#719cd6,bg=#131a24] #{prefix_highlight} #(/path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes ~/zet)#[fg=#aeafb0,bg=#131a24,nobold,nounderscore,noitalics]#[fg=#131a24,bg=#aeafb0] %Y-%m-%d  %I:%M %p #[fg=#719cd6,bg=#aeafb0,nobold,nounderscore,noitalics]#[fg=#131a24,bg=#719cd6,bold] #h "
 ```
 
-The script outputs nothing when no reminders are due, and shows a red
-highlighted count when reminders need attention:
-
-```
- 2 reminders
-```
-
 ### Platform Support
 
-The script supports both macOS and Linux date parsing.
+The scripts support both macOS and Linux.
+
+### Note for Oil.nvim Users
+
+If you use Oil.nvim as your default file explorer, add this check to your Oil
+config to prevent it from opening when nvim is launched with commands:
+
+```lua
+vim.api.nvim_create_autocmd("VimEnter", {
+    callback = function()
+        local has_startup_commands = vim.tbl_contains(vim.v.argv, "-c") or vim.tbl_contains(vim.v.argv, "+")
+        if vim.fn.argc() == 0 and not has_startup_commands then
+            vim.cmd('Oil')
+        end
+    end
+})
+```
 
 ## Unit Tests and CI
 
