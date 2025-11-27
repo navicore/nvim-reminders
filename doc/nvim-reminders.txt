@@ -5,7 +5,7 @@ CONTENTS                                                 *nvim-reminders-content
 
 Introduction.............................................|nvim-reminders-intro|
 Commands.................................................|nvim-reminders-commands|
-Reminders................................................|nvim-reminders-list|
+Telescope Picker.........................................|nvim-reminders-picker|
 Configuration............................................|nvim-reminders-config|
 Tmux Integration.........................................|nvim-reminders-tmux|
 
@@ -26,17 +26,37 @@ COMMANDS                                                *nvim-reminders-commands
 :ReminderTmuxSetup        Show tmux integration setup instructions
 
 ==============================================================================
-REMINDERS                                               *nvim-reminders-list*
+TELESCOPE PICKER                                        *nvim-reminders-picker*
 
-The commands will open a floating window with a list of reminders.
+When Telescope is installed, the scan commands open a Telescope picker with
+a preview pane showing the file context for each reminder.
 
-Use vim motion keys to navigate the list.
+The picker displays reminders in a two-column format:
+- Left: Reminder text (truncated if needed)
+- Right: Relative time (e.g., "2 hours ago")
 
-Press `q` to close the window.
+Keybindings ~
 
-Press <CR> to select a reminder and open it in a new buffer.
+`<CR>`          Jump to the reminder in its file
+`e`             Snooze/edit reminder time (normal mode only)
+`<Esc>`         Enter normal mode
+`<C-c>`         Close picker
 
-Use 't' to toggle the sort order from oldest to newest and vice versa.
+Snoozing ~
+
+Press `e` in normal mode to snooze a reminder. This opens a time picker
+with options like "in 10 minutes", "in 1 hour", "in 1 day", etc. After
+selecting a time, the reminder is updated and the picker refreshes so you
+can continue triaging.
+
+Fallback ~
+
+If Telescope is not installed, a simple floating window is used instead
+with these keybindings:
+
+`<CR>`          Jump to the reminder
+`q`             Close the window
+`t`             Toggle sort order (oldest/newest)
 
 ==============================================================================
 CONFIGURATION                                           *nvim-reminders-config*
@@ -66,24 +86,43 @@ processing the `ReminderScan` and `ReminderScanUpcoming` commands.  Note,
 ==============================================================================
 TMUX INTEGRATION                                        *nvim-reminders-tmux*
 
-The plugin includes a shell script for tmux status bar integration. When
-reminders are due, you'll see a notification in your tmux status line.
+The plugin includes shell scripts for tmux integration:
+- Status bar count (clickable)
+- Popup window for ReminderScan
 
 Quick Setup ~
 
-Run `:ReminderTmuxSetup` to get a copy-paste ready configuration snippet
-with the correct script path and your configured reminder paths.
+Run `:ReminderTmuxSetup` to get copy-paste ready configuration snippets
+with the correct paths for your setup.
 
-Manual Setup ~
+Status Bar ~
 
-The script is located at `scripts/tmux-reminders.sh` in the plugin directory.
-It requires paths as arguments:
+Add the reminder count to your status bar:
 >
-  /path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes ~/zet
+  set -g status-right '#(/path/to/tmux-reminders.sh ~/notes) %H:%M'
 
-Add to your tmux.conf:
+The script outputs nothing when no reminders are due. When reminders need
+attention, it displays a red highlighted count.
+
+Popup with Keybinding ~
+
+Open ReminderScan in a tmux popup with `prefix + r`:
 >
-  set -g status-right '#(/path/to/script/tmux-reminders.sh ~/notes) %H:%M'
+  bind r run-shell '/path/to/tmux-reminder-popup.sh'
+
+The popup opens nvim with the Telescope picker, and closes automatically
+when you quit nvim. Your panes stay untouched underneath.
+
+Click Support ~
+
+Make the status bar reminder count clickable (requires tmux 3.0+):
+>
+  bind -Troot MouseDown1Status \
+    if -F '#{==:#{mouse_status_range},reminder}' \
+    { run-shell '/path/to/tmux-reminder-popup.sh' } \
+    { select-window -t = }
+
+Now clicking the red reminder count opens the popup directly.
 
 Advanced Styling ~
 
@@ -95,14 +134,9 @@ For powerline-style glyphs with the Nightfox color scheme:
     #[fg=#aeafb0,bg=#131a24]#[fg=#131a24,bg=#aeafb0] %Y-%m-%d %I:%M %p \
     #[fg=#719cd6,bg=#aeafb0]#[fg=#131a24,bg=#719cd6,bold] #h "
 
-The script outputs nothing when no reminders are due. When reminders need
-attention, it displays a red highlighted count like:
->
-   2 reminders
-
 Platform Support ~
 
-The script supports both macOS and Linux date parsing automatically.
+The scripts support both macOS and Linux.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:
