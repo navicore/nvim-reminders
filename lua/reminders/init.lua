@@ -325,6 +325,65 @@ vim.api.nvim_create_user_command("ReminderEdit", function()
 	open_datetime_selector(line_nr)
 end, {})
 
+vim.api.nvim_create_user_command("ReminderTmuxSetup", function()
+	-- Find the plugin's installation path by looking for this file
+	local script_path = debug.getinfo(1, "S").source:sub(2)
+	local plugin_root = fn.fnamemodify(script_path, ":h:h:h")
+	local tmux_script = plugin_root .. "/scripts/tmux-reminders.sh"
+
+	-- Build the paths argument string from config
+	local paths_arg = ""
+	if M.config and M.config.paths then
+		local expanded_paths = {}
+		for _, path in ipairs(M.config.paths) do
+			table.insert(expanded_paths, fn.expand(path))
+		end
+		paths_arg = table.concat(expanded_paths, " ")
+	end
+
+	local lines = {
+		"",
+		"nvim-reminders tmux integration",
+		string.rep("=", 40),
+		"",
+		"Script path:",
+		"  " .. tmux_script,
+		"",
+		"Add to your tmux.conf status-right:",
+		"",
+		"  #(" .. tmux_script .. " " .. paths_arg .. ")",
+		"",
+		"Simple example:",
+		"",
+		[[  set -g status-right '#(]] .. tmux_script .. " " .. paths_arg .. [[) %H:%M']],
+		"",
+		"See :help nvim-reminders-tmux for advanced styling with powerline glyphs.",
+		"",
+	}
+
+	-- Display in a floating window for easy copying
+	local width = math.floor(vim.o.columns * 0.8)
+	local height = #lines + 2
+	local bufnr = api.nvim_create_buf(false, true)
+	local opts = {
+		relative = "editor",
+		width = width,
+		height = height,
+		col = math.floor((vim.o.columns - width) / 2),
+		row = math.floor((vim.o.lines - height) / 2),
+		style = "minimal",
+		border = "rounded",
+	}
+	local win = api.nvim_open_win(bufnr, true, opts)
+
+	api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+	api.nvim_buf_set_option(bufnr, "modifiable", false)
+	api.nvim_buf_set_option(bufnr, "buftype", "nofile")
+
+	-- Close with q
+	api.nvim_buf_set_keymap(bufnr, "n", "q", [[<cmd>lua vim.api.nvim_win_close(0, true)<CR>]], { noremap = true, silent = true })
+end, {})
+
 -- Plugin setup function
 function M.setup(user_config)
 	M.config = {
