@@ -169,6 +169,52 @@ And the plugin will display a virtual text next to it showing something like:
 #reminder 2024-08-25T14:00:00Z: Follow up on the meeting notes : in 2 hours
 ```
 
+## Tmux Integration
+
+The plugin includes a shell script that counts due reminders for display in your
+tmux status bar. When reminders are due, you'll see a notification in your tmux
+status line - a gentle nudge to run `:ReminderScan`.
+
+### Quick Setup
+
+Run `:ReminderTmuxSetup` in Neovim to get a copy-paste ready configuration
+snippet with the correct paths for your setup.
+
+### Manual Setup
+
+The script is located at `scripts/tmux-reminders.sh` in the plugin directory.
+It requires paths as arguments:
+
+```bash
+/path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes ~/zet
+```
+
+Add to your `tmux.conf`:
+
+```tmux
+set -g status-right '#(/path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes) %H:%M'
+```
+
+### Advanced Styling (Powerline)
+
+For a more polished look with powerline-style glyphs and the Nightfox color
+scheme:
+
+```tmux
+set -g status-right "#[fg=#131a24,bg=#131a24,nobold,nounderscore,noitalics]#[fg=#719cd6,bg=#131a24] #{prefix_highlight} #(/path/to/nvim-reminders/scripts/tmux-reminders.sh ~/notes ~/zet)#[fg=#aeafb0,bg=#131a24,nobold,nounderscore,noitalics]#[fg=#131a24,bg=#aeafb0] %Y-%m-%d  %I:%M %p #[fg=#719cd6,bg=#aeafb0,nobold,nounderscore,noitalics]#[fg=#131a24,bg=#719cd6,bold] #h "
+```
+
+The script outputs nothing when no reminders are due, and shows a red
+highlighted count when reminders need attention:
+
+```
+ 2 reminders
+```
+
+### Platform Support
+
+The script supports both macOS and Linux date parsing.
+
 ## Unit Tests and CI
 
 test locally by running editor command:
