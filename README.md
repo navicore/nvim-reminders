@@ -150,13 +150,40 @@ require('reminders').setup({
 The plugin supports the following natural language time expressions, which will
 be automatically converted to ISO 8601 format:
 
+**Relative times:**
 ```
-    in X minutes
-    in X hours
-    in X days
-    tomorrow
-    next Monday (or any other weekday)
+in 10 minutes
+in 2 hours
+in 3 days
+in 1 week
 ```
+
+**Specific days:**
+```
+today at 6pm
+tomorrow at 9:30am
+next Monday
+next Friday at 3pm
+```
+
+**Named dates:**
+```
+Jan 1
+on January 15
+December 25, 2025
+July 4th
+March 15 at 9:30am
+September 2, 2025 at 3:30pm
+```
+
+**Numeric dates:**
+```
+10/15/2024
+10/15/2024 6:30pm
+```
+
+When no year is specified for named dates, the plugin uses the next occurrence
+(e.g., if it's December and you write "Jan 1", it will use next year).
 
 ### Example Reminder
 

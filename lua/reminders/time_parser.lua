@@ -15,6 +15,22 @@ local time_units = {
     year = {single = "year", plural = "years", seconds = 31536000},     -- Approximation (365 days)
 }
 
+-- Month name lookup table (lowercase keys)
+local month_names = {
+    jan = 1, january = 1,
+    feb = 2, february = 2,
+    mar = 3, march = 3,
+    apr = 4, april = 4,
+    may = 5,
+    jun = 6, june = 6,
+    jul = 7, july = 7,
+    aug = 8, august = 8,
+    sep = 9, sept = 9, september = 9,
+    oct = 10, october = 10,
+    nov = 11, november = 11,
+    dec = 12, december = 12,
+}
+
 -- General function to parse expressions like "in 20 minutes", "in 1 hour", etc.
 function M.parse_time_expression(expression)
     for _, unit in pairs(time_units) do
@@ -294,13 +310,168 @@ function M.parse_specific_day_with_time(expression)
     return nil
 end
 
+-- Helper to strip ordinal suffixes (1st -> 1, 2nd -> 2, etc.)
+local function strip_ordinal(day_str)
+    local result = day_str:gsub("([0-9]+)[stndrh]+", "%1")
+    return result
+end
+
+-- Helper to determine the next occurrence of a month/day
+local function next_occurrence(month, day, hour, minute)
+    local now = os.date("!*t")
+    local year = now.year
+
+    -- Build target date for this year
+    local target = os.time({
+        year = year,
+        month = month,
+        day = day,
+        hour = hour or 0,
+        min = minute or 0,
+        sec = 0,
+        isdst = false
+    })
+
+    -- If target is in the past, use next year
+    local now_time = os.time({
+        year = now.year,
+        month = now.month,
+        day = now.day,
+        hour = now.hour,
+        min = now.min,
+        sec = now.sec,
+        isdst = false
+    })
+
+    if target <= now_time then
+        target = os.time({
+            year = year + 1,
+            month = month,
+            day = day,
+            hour = hour or 0,
+            min = minute or 0,
+            sec = 0,
+            isdst = false
+        })
+    end
+
+    return target
+end
+
+-- Function to parse named date expressions like "Jan 1", "on January 15", "Dec 25, 2025"
+function M.parse_named_date(expression)
+    -- Patterns to match various named date formats
+    -- Order matters: more specific patterns first
+    -- Note: ordinal suffixes (st, nd, rd, th) are optional and handled separately
+    local patterns = {
+        -- "on Jan 1 at 9:30am" or "January 1 at 9:30am"
+        {"^on%s+(%a+)%s+(%d+)%a*%s+at%s+(%d+):(%d+)%s*([ap]m)%s*$", {"month_str", "day_str", "hour_str", "minute_str", "ampm"}},
+        {"^(%a+)%s+(%d+)%a*%s+at%s+(%d+):(%d+)%s*([ap]m)%s*$", {"month_str", "day_str", "hour_str", "minute_str", "ampm"}},
+        -- "on Jan 1 at 9am" or "January 1 at 9am"
+        {"^on%s+(%a+)%s+(%d+)%a*%s+at%s+(%d+)%s*([ap]m)%s*$", {"month_str", "day_str", "hour_str", "ampm"}},
+        {"^(%a+)%s+(%d+)%a*%s+at%s+(%d+)%s*([ap]m)%s*$", {"month_str", "day_str", "hour_str", "ampm"}},
+        -- "on Jan 1 at 9:30" or "January 1 at 9:30" (24-hour)
+        {"^on%s+(%a+)%s+(%d+)%a*%s+at%s+(%d+):(%d+)%s*$", {"month_str", "day_str", "hour_str", "minute_str"}},
+        {"^(%a+)%s+(%d+)%a*%s+at%s+(%d+):(%d+)%s*$", {"month_str", "day_str", "hour_str", "minute_str"}},
+        -- "on Jan 1 at 9" (24-hour)
+        {"^on%s+(%a+)%s+(%d+)%a*%s+at%s+(%d+)%s*$", {"month_str", "day_str", "hour_str"}},
+        {"^(%a+)%s+(%d+)%a*%s+at%s+(%d+)%s*$", {"month_str", "day_str", "hour_str"}},
+        -- "January 1, 2026 at 9:30am"
+        {"^(%a+)%s+(%d+)%a*,?%s+(%d%d%d%d)%s+at%s+(%d+):(%d+)%s*([ap]m)%s*$", {"month_str", "day_str", "year_str", "hour_str", "minute_str", "ampm"}},
+        -- "January 1, 2026 at 9am"
+        {"^(%a+)%s+(%d+)%a*,?%s+(%d%d%d%d)%s+at%s+(%d+)%s*([ap]m)%s*$", {"month_str", "day_str", "year_str", "hour_str", "ampm"}},
+        -- "January 1, 2026" (with comma, optional)
+        {"^(%a+)%s+(%d+)%a*,?%s+(%d%d%d%d)%s*$", {"month_str", "day_str", "year_str"}},
+        -- "on Jan 1" or "Jan 1" (no year, defaults to next occurrence)
+        {"^on%s+(%a+)%s+(%d+)%a*%s*$", {"month_str", "day_str"}},
+        {"^(%a+)%s+(%d+)%a*%s*$", {"month_str", "day_str"}},
+    }
+
+    for _, pattern_info in ipairs(patterns) do
+        local pattern = pattern_info[1]
+        local captures = pattern_info[2]
+        local match = {string.match(expression, pattern)}
+
+        if #match > 0 then
+            local data = {}
+            for i, capture_name in ipairs(captures) do
+                data[capture_name] = match[i]
+            end
+
+            local month_str = data.month_str
+            local day_str = data.day_str
+            local year_str = data.year_str
+            local hour_str = data.hour_str
+            local minute_str = data.minute_str or "0"
+            local ampm = data.ampm
+
+            -- Look up month number
+            local month = month_names[month_str:lower()]
+            if not month then
+                return nil -- Not a valid month name
+            end
+
+            local day = tonumber(strip_ordinal(day_str))
+            local hour = hour_str and tonumber(hour_str) or 0
+            local minute = tonumber(minute_str)
+
+            -- Validate day
+            if not day or day < 1 or day > 31 then
+                return nil
+            end
+
+            -- Adjust hour based on am/pm if provided
+            if ampm then
+                ampm = ampm:lower()
+                if ampm == "pm" and hour ~= 12 then
+                    hour = hour + 12
+                elseif ampm == "am" and hour == 12 then
+                    hour = 0
+                end
+            end
+
+            local target_time
+            if year_str then
+                -- Explicit year provided - construct UTC time directly
+                local year = tonumber(year_str)
+                if year < 100 then
+                    year = year + 2000
+                end
+                -- Use os.time to get a timestamp, then format as UTC
+                -- We need to account for local timezone offset
+                local utc_time = os.time({
+                    year = year,
+                    month = month,
+                    day = day,
+                    hour = hour,
+                    min = minute,
+                    sec = 0,
+                })
+                -- Format directly as the UTC time we want (treating input as UTC)
+                return string.format("%04d-%02d-%02dT%02d:%02d:00Z", year, month, day, hour, minute)
+            else
+                -- No year, use next occurrence
+                target_time = next_occurrence(month, day, hour, minute)
+                if target_time then
+                    -- Get the date components and format as UTC
+                    local t = os.date("*t", target_time)
+                    return string.format("%04d-%02d-%02dT%02d:%02d:00Z", t.year, t.month, t.day, hour, minute)
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
 -- Main function to parse any time expression
 function M.parse(expression)
     return M.parse_time_expression(expression)
         or M.parse_on_weekday_at_time(expression)
         or M.parse_next_weekday(expression)
+        or M.parse_named_date(expression)
         or M.parse_full_date_time(expression)
-        or M.parse_specific_day_with_time(expression) -- Add the new function here
+        or M.parse_specific_day_with_time(expression)
 end
 
 function M.time_until(datetime)
