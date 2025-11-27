@@ -280,7 +280,19 @@ function M.scan_reminders(upcoming)
 	else
 		reminder_list.scan_paths(M.config.paths)
 	end
-	show_reminders()
+
+	-- Use Telescope if available, otherwise fall back to floating window
+	local has_telescope = pcall(require, "telescope")
+	if has_telescope then
+		local telescope_reminders = require("reminders.telescope")
+		telescope_reminders.reminder_picker({
+			paths = M.config.paths,
+			scan_type = upcoming and "upcoming" or "due",
+			prompt_title = upcoming and "Upcoming Reminders" or "Due Reminders",
+		})
+	else
+		show_reminders()
+	end
 end
 
 function M.open_reminder_item()
@@ -310,7 +322,19 @@ end, {})
 
 api.nvim_create_user_command("ReminderScanAll", function()
 	reminder_list.scan_paths_all(M.config.paths)
-	show_reminders()
+
+	-- Use Telescope if available, otherwise fall back to floating window
+	local has_telescope = pcall(require, "telescope")
+	if has_telescope then
+		local telescope_reminders = require("reminders.telescope")
+		telescope_reminders.reminder_picker({
+			paths = M.config.paths,
+			scan_type = "all",
+			prompt_title = "All Reminders",
+		})
+	else
+		show_reminders()
+	end
 end, {})
 
 vim.api.nvim_create_user_command("ReminderEdit", function()
