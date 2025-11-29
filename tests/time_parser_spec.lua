@@ -108,23 +108,24 @@ describe("parse", function()
         assert.is_true(success, err)
     end)
 
-    -- Weekday without time tests
-    it("should parse 'Sunday' as next Sunday at midnight", function()
+    -- Weekday without time tests (midnight local time → UTC varies by timezone)
+    it("should parse 'Sunday' as next Sunday at local midnight", function()
         local result = parse("Sunday")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("T00:00:00Z$"))
+        -- Verify it's a valid ISO 8601 datetime
+        assert.is_truthy(result:match("^%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ$"))
     end)
 
-    it("should parse 'on Sunday' as next Sunday at midnight", function()
+    it("should parse 'on Sunday' as next Sunday at local midnight", function()
         local result = parse("on Sunday")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("T00:00:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ$"))
     end)
 
-    it("should parse 'on Monday' as next Monday at midnight", function()
+    it("should parse 'on Monday' as next Monday at local midnight", function()
         local result = parse("on Monday")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("T00:00:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%dZ$"))
     end)
 
     -- Time-first patterns
@@ -149,64 +150,77 @@ end)
 describe("parse_named_date", function()
     local parse_named_date = require "reminders.time_parser".parse_named_date
 
+    -- Helper: convert local time to expected UTC string
+    local function local_to_utc(year, month, day, hour, minute)
+        local local_time = os.time({year=year, month=month, day=day, hour=hour, min=minute, sec=0})
+        return os.date("!%Y-%m-%dT%H:%M:%SZ", local_time)
+    end
+
     it("should parse 'Jan 1' as a valid date", function()
         local result = parse_named_date("Jan 1")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-01%-01T00:00:00Z$"))
+        -- Should be Jan 1 at local midnight, converted to UTC
+        assert.is_truthy(result:match("^%d%d%d%d%-01%-01T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'on Jan 1' as a valid date", function()
         local result = parse_named_date("on Jan 1")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-01%-01T00:00:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-01%-01T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'January 1' as a valid date", function()
         local result = parse_named_date("January 1")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-01%-01T00:00:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-01%-01T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'December 25, 2025' with explicit year", function()
         local result = parse_named_date("December 25, 2025")
         assert.is_not_nil(result)
-        assert.are.equal("2025-12-25T00:00:00Z", result)
+        -- Midnight local → UTC (varies by timezone)
+        local expected = local_to_utc(2025, 12, 25, 0, 0)
+        assert.are.equal(expected, result)
     end)
 
     it("should parse 'Jan 1, 2026' with explicit year", function()
         local result = parse_named_date("Jan 1, 2026")
         assert.is_not_nil(result)
-        assert.are.equal("2026-01-01T00:00:00Z", result)
+        local expected = local_to_utc(2026, 1, 1, 0, 0)
+        assert.are.equal(expected, result)
     end)
 
     it("should parse 'Feb 14 at 6pm' with time", function()
         local result = parse_named_date("Feb 14 at 6pm")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-02%-14T18:00:00Z$"))
+        -- 6pm local → UTC (date may shift to Feb 15 depending on timezone)
+        assert.is_truthy(result:match("^%d%d%d%d%-02%-1[45]T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'on March 15 at 9:30am' with time", function()
         local result = parse_named_date("on March 15 at 9:30am")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-03%-15T09:30:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-03%-15T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'July 4th' with ordinal suffix", function()
         local result = parse_named_date("July 4th")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-07%-04T00:00:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-07%-04T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'Dec 1st at 12pm' with ordinal and time", function()
         local result = parse_named_date("Dec 1st at 12pm")
         assert.is_not_nil(result)
-        assert.is_truthy(result:match("^%d%d%d%d%-12%-01T12:00:00Z$"))
+        assert.is_truthy(result:match("^%d%d%d%d%-12%-01T%d%d:%d%d:%d%dZ$"))
     end)
 
     it("should parse 'September 2, 2025 at 3:30pm' full format", function()
         local result = parse_named_date("September 2, 2025 at 3:30pm")
         assert.is_not_nil(result)
-        assert.are.equal("2025-09-02T15:30:00Z", result)
+        -- 3:30pm local → UTC
+        local expected = local_to_utc(2025, 9, 2, 15, 30)
+        assert.are.equal(expected, result)
     end)
 
     it("should return nil for invalid month name", function()

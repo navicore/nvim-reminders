@@ -99,18 +99,17 @@ function M.parse_full_date_time(expression)
                 return nil  -- Invalid date
             end
 
-            -- Construct the target time in UTC
+            -- Construct target as LOCAL time (os.time interprets table as local)
             local target_time = os.time({
-                year = tostring(year),
-                month = tostring(month),
-                day = tostring(day),
+                year = year,
+                month = month,
+                day = day,
                 hour = hour,
                 min = minute,
                 sec = 0,
-                isdst = false
             })
 
-            -- Ensure the time is valid
+            -- Convert to UTC for storage
             if target_time then
                 return os.date("!%Y-%m-%dT%H:%M:%SZ", target_time)
             end
@@ -199,27 +198,33 @@ function M.parse_on_weekday_at_time(expression)
                     end
                 end
 
-                -- Construct the UTC timestamp manually
-                local now_utc = os.date("!*t")
+                -- Use LOCAL time for day-of-week calculations (human input is always local)
+                local now_local = os.date("*t")
 
                 -- Determine if 'next' was in the expression
                 local is_next = expression:lower():find("^%s*on%s+next%s+") or expression:lower():find("^%s*next%s+")
 
-                -- Calculate days ahead
-                local days_ahead = (target_wday - now_utc.wday + 7) % 7
+                -- Calculate days ahead based on LOCAL day of week
+                local days_ahead = (target_wday - now_local.wday + 7) % 7
                 if days_ahead == 0 then
-                    if is_next or (hour < now_utc.hour or (hour == now_utc.hour and minute <= now_utc.min)) then
+                    -- Same day - check if time has passed in LOCAL time
+                    if is_next or (hour < now_local.hour or (hour == now_local.hour and minute <= now_local.min)) then
                         days_ahead = 7  -- Move to next week if time has already passed today
                     end
                 end
 
-                -- Calculate target timestamp and extract UTC date components
-                local target_timestamp = os.time() + (days_ahead * 86400)
-                local target_date = os.date("!*t", target_timestamp)
+                -- Construct target as LOCAL time, then convert to UTC
+                local target_local_time = os.time({
+                    year = now_local.year,
+                    month = now_local.month,
+                    day = now_local.day + days_ahead,
+                    hour = hour,
+                    min = minute,
+                    sec = 0,
+                })
 
-                -- Format with the specified time (treated as UTC)
-                return string.format("%04d-%02d-%02dT%02d:%02d:00Z",
-                    target_date.year, target_date.month, target_date.day, hour, minute)
+                -- Format as UTC for storage
+                return os.date("!%Y-%m-%dT%H:%M:%SZ", target_local_time)
             end
         end
     end
@@ -326,12 +331,12 @@ local function strip_ordinal(day_str)
     return result
 end
 
--- Helper to determine the next occurrence of a month/day
+-- Helper to determine the next occurrence of a month/day (treats input as LOCAL time)
 local function next_occurrence(month, day, hour, minute)
-    local now = os.date("!*t")
+    local now = os.date("*t")  -- Use LOCAL time
     local year = now.year
 
-    -- Build target date for this year
+    -- Build target date for this year as LOCAL time
     local target = os.time({
         year = year,
         month = month,
@@ -339,19 +344,10 @@ local function next_occurrence(month, day, hour, minute)
         hour = hour or 0,
         min = minute or 0,
         sec = 0,
-        isdst = false
     })
 
     -- If target is in the past, use next year
-    local now_time = os.time({
-        year = now.year,
-        month = now.month,
-        day = now.day,
-        hour = now.hour,
-        min = now.min,
-        sec = now.sec,
-        isdst = false
-    })
+    local now_time = os.time()
 
     if target <= now_time then
         target = os.time({
@@ -361,7 +357,6 @@ local function next_occurrence(month, day, hour, minute)
             hour = hour or 0,
             min = minute or 0,
             sec = 0,
-            isdst = false
         })
     end
 
@@ -442,14 +437,13 @@ function M.parse_named_date(expression)
 
             local target_time
             if year_str then
-                -- Explicit year provided - construct UTC time directly
+                -- Explicit year provided - construct as LOCAL time, convert to UTC
                 local year = tonumber(year_str)
                 if year < 100 then
                     year = year + 2000
                 end
-                -- Use os.time to get a timestamp, then format as UTC
-                -- We need to account for local timezone offset
-                local utc_time = os.time({
+                -- Build local timestamp
+                local local_time = os.time({
                     year = year,
                     month = month,
                     day = day,
@@ -457,15 +451,14 @@ function M.parse_named_date(expression)
                     min = minute,
                     sec = 0,
                 })
-                -- Format directly as the UTC time we want (treating input as UTC)
-                return string.format("%04d-%02d-%02dT%02d:%02d:00Z", year, month, day, hour, minute)
+                -- Format as UTC for storage
+                return os.date("!%Y-%m-%dT%H:%M:%SZ", local_time)
             else
-                -- No year, use next occurrence
+                -- No year, use next occurrence (already returns local timestamp)
                 target_time = next_occurrence(month, day, hour, minute)
                 if target_time then
-                    -- Get the date components and format as UTC
-                    local t = os.date("*t", target_time)
-                    return string.format("%04d-%02d-%02dT%02d:%02d:00Z", t.year, t.month, t.day, hour, minute)
+                    -- Convert local timestamp to UTC
+                    return os.date("!%Y-%m-%dT%H:%M:%SZ", target_time)
                 end
             end
         end
