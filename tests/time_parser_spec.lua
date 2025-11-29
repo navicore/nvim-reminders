@@ -108,6 +108,42 @@ describe("parse", function()
         assert.is_true(success, err)
     end)
 
+    -- Weekday without time tests
+    it("should parse 'Sunday' as next Sunday at midnight", function()
+        local result = parse("Sunday")
+        assert.is_not_nil(result)
+        assert.is_truthy(result:match("T00:00:00Z$"))
+    end)
+
+    it("should parse 'on Sunday' as next Sunday at midnight", function()
+        local result = parse("on Sunday")
+        assert.is_not_nil(result)
+        assert.is_truthy(result:match("T00:00:00Z$"))
+    end)
+
+    it("should parse 'on Monday' as next Monday at midnight", function()
+        local result = parse("on Monday")
+        assert.is_not_nil(result)
+        assert.is_truthy(result:match("T00:00:00Z$"))
+    end)
+
+    -- Time-first patterns
+    it("should parse '6am tomorrow' with time before day", function()
+        local result = parse("6am tomorrow")
+        assert.is_not_nil(result)
+        -- Should have 06:00 or 14:00 (depending on timezone conversion)
+    end)
+
+    it("should parse '9:30am tomorrow' with time before day", function()
+        local result = parse("9:30am tomorrow")
+        assert.is_not_nil(result)
+    end)
+
+    it("should parse 'tomorrow 6am' without 'at'", function()
+        local result = parse("tomorrow 6am")
+        assert.is_not_nil(result)
+    end)
+
 end)
 
 describe("parse_named_date", function()

@@ -151,13 +151,16 @@ function M.parse_on_weekday_at_time(expression)
         {"^next%s+(%a+)%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
         {"^next%s+(%a+)%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
         {"^next%s+(%a+)%s+(%d+)%s*$", {"day_str", "hour_str"}},
-        -- Without 'on' or 'next'
+        -- Without 'on' or 'next', with time
         {"^(%a+)%s+at%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
         {"^(%a+)%s+at%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
         {"^(%a+)%s+at%s+(%d+)%s*$", {"day_str", "hour_str"}},
         {"^(%a+)%s+(%d+):(%d+)([ap]m)%s*$", {"day_str", "hour_str", "minute_str", "ampm"}},
         {"^(%a+)%s+(%d+)([ap]m)%s*$", {"day_str", "hour_str", "ampm"}},
         {"^(%a+)%s+(%d+)%s*$", {"day_str", "hour_str"}},
+        -- Weekday only (no time) - defaults to midnight
+        {"^on%s+(%a+)%s*$", {"day_str"}},
+        {"^(%a+)%s*$", {"day_str"}},
     }
 
     -- Iterate over each pattern
@@ -176,13 +179,14 @@ function M.parse_on_weekday_at_time(expression)
             local minute_str = data.minute_str or "0"
             local ampm = data.ampm
 
-            if day_str and hour_str then
+            if day_str then
                 local target_wday = days_of_week[day_str:lower()]
                 if not target_wday then
                     return nil
                 end
 
-                local hour = tonumber(hour_str)
+                -- Default to midnight if no time specified
+                local hour = hour_str and tonumber(hour_str) or 0
                 local minute = tonumber(minute_str)
 
                 -- Adjust hour based on am/pm if provided
@@ -209,18 +213,13 @@ function M.parse_on_weekday_at_time(expression)
                     end
                 end
 
-                -- Construct the target time
-                local target_time = os.time({
-                    year = now_utc.year,
-                    month = now_utc.month,
-                    day = now_utc.day + days_ahead,
-                    hour = hour,
-                    min = minute,
-                    sec = 0,
-                    isdst = false
-                })
+                -- Calculate target timestamp and extract UTC date components
+                local target_timestamp = os.time() + (days_ahead * 86400)
+                local target_date = os.date("!*t", target_timestamp)
 
-                return os.date("!%Y-%m-%dT%H:%M:%SZ", target_time)
+                -- Format with the specified time (treated as UTC)
+                return string.format("%04d-%02d-%02dT%02d:%02d:00Z",
+                    target_date.year, target_date.month, target_date.day, hour, minute)
             end
         end
     end
@@ -253,12 +252,23 @@ end
 
 -- Function to parse "today at X" or "tomorrow at X"
 function M.parse_specific_day_with_time(expression)
-    -- Match patterns like "today at 6:30am" or "tomorrow at 6am"
+    -- Match patterns like "today at 6:30am", "tomorrow at 6am", "6am tomorrow", "tomorrow 6am"
     local patterns = {
+        -- Standard "today/tomorrow at TIME" patterns
         {"^(today)%s+at%s+(%d+):(%d+)([ap]m)$", {"day", "hour_str", "minute_str", "ampm"}}, -- HH:MM am/pm
         {"^(today)%s+at%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}},                   -- HH am/pm
         {"^(tomorrow)%s+at%s+(%d+):(%d+)([ap]m)$", {"day", "hour_str", "minute_str", "ampm"}}, -- HH:MM am/pm
-        {"^(tomorrow)%s+at%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}}                -- HH am/pm
+        {"^(tomorrow)%s+at%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}},                -- HH am/pm
+        -- Without "at": "today 6am", "tomorrow 6:30pm"
+        {"^(today)%s+(%d+):(%d+)([ap]m)$", {"day", "hour_str", "minute_str", "ampm"}},
+        {"^(today)%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}},
+        {"^(tomorrow)%s+(%d+):(%d+)([ap]m)$", {"day", "hour_str", "minute_str", "ampm"}},
+        {"^(tomorrow)%s+(%d+)([ap]m)$", {"day", "hour_str", "ampm"}},
+        -- Time-first patterns: "6am today", "6:30pm tomorrow"
+        {"^(%d+):(%d+)([ap]m)%s+(today)$", {"hour_str", "minute_str", "ampm", "day"}},
+        {"^(%d+)([ap]m)%s+(today)$", {"hour_str", "ampm", "day"}},
+        {"^(%d+):(%d+)([ap]m)%s+(tomorrow)$", {"hour_str", "minute_str", "ampm", "day"}},
+        {"^(%d+)([ap]m)%s+(tomorrow)$", {"hour_str", "ampm", "day"}},
     }
 
     for _, pattern_info in ipairs(patterns) do
