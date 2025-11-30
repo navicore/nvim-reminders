@@ -60,9 +60,11 @@ for dir in "$@"; do
 done
 
 # Output for tmux with click support
-# Uses range=user|reminder to mark clickable region
-# Requires this bind in tmux.conf:
+# Uses range=user|reminder to mark clickable region for reminders
+# Uses range=user|zett for the subtle Zett button when no reminders
+# Requires these binds in tmux.conf (two separate bindings):
 #   bind -Troot MouseDown1Status if -F '#{==:#{mouse_status_range},reminder}' { run-shell '/path/to/tmux-reminder-popup.sh' }
+#   bind -Troot MouseDown1Status if -F '#{==:#{mouse_status_range},zett}' { run-shell '/path/to/tmux-zett-popup.sh' }
 if [[ "$count" -gt 0 ]]; then
     if [[ "$count" -eq 1 ]]; then
         label=" $count reminder "
@@ -70,4 +72,8 @@ if [[ "$count" -gt 0 ]]; then
         label=" $count reminders "
     fi
     echo "#[fg=#131a24,bg=#f7768e,bold]#[range=user|reminder]${label}#[norange]#[fg=#f7768e,bg=#131a24]"
+else
+    # No reminders - show subtle Zett button that opens Telekasten goto_today
+    # Matches unselected tab style: grey text on dark background
+    echo "#[fg=#71839b,bg=#131a24,nobold]#[range=user|zett] Zett #[norange]"
 fi
