@@ -11,6 +11,15 @@
 # Click support: clicking the reminder count opens ReminderScan in a popup
 #
 
+# Skip when display is asleep (macOS) to allow system sleep
+if [[ "$(uname)" == "Darwin" ]]; then
+    _ps=$(pmset -g powerstate IOPMrootDomain 2>/dev/null | awk '/IOPMrootDomain/{print $3}')
+    if [[ "$_ps" =~ ^[01]$ ]]; then
+        echo "#[fg=#71839b,bg=#131a24,nobold]#[range=user|zett] Zett #[norange]"
+        exit 0
+    fi
+fi
+
 # Get the directory where this script lives (to find popup script)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POPUP_SCRIPT="$SCRIPT_DIR/tmux-reminder-popup.sh"
