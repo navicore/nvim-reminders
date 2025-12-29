@@ -175,7 +175,8 @@ local function open_datetime_selector(line_nr)
 		"in 10 minutes",
 		"in 1 hour",
 		"in 2 hours",
-		"in 1 day",
+		"1pm today",
+		"tomorrow 6am",
 		"in 2 days",
 		"in 1 week",
 		"in 2 weeks",
@@ -209,6 +210,7 @@ end
 
 local function calculate_new_datetime(choice)
 	local current_time = os.time()
+	local now = os.date("*t")
 	local new_time
 
 	if choice == "in 10 minutes" then
@@ -217,8 +219,12 @@ local function calculate_new_datetime(choice)
 		new_time = current_time + 1 * 60 * 60
 	elseif choice == "in 2 hours" then
 		new_time = current_time + 2 * 60 * 60
-	elseif choice == "in 1 day" then
-		new_time = current_time + 24 * 60 * 60
+	elseif choice == "1pm today" then
+		-- 1pm local time today
+		new_time = os.time({ year = now.year, month = now.month, day = now.day, hour = 13, min = 0, sec = 0 })
+	elseif choice == "tomorrow 6am" then
+		-- 6am local time tomorrow
+		new_time = os.time({ year = now.year, month = now.month, day = now.day + 1, hour = 6, min = 0, sec = 0 })
 	elseif choice == "in 2 days" then
 		new_time = current_time + 2 * 24 * 60 * 60
 	elseif choice == "in 1 week" then
@@ -226,7 +232,7 @@ local function calculate_new_datetime(choice)
 	elseif choice == "in 2 weeks" then
 		new_time = current_time + 14 * 24 * 60 * 60
 	elseif choice == "in 1 month" then
-		new_time = os.time({ year = os.date("*t").year, month = os.date("*t").month + 1, day = os.date("*t").day })
+		new_time = os.time({ year = now.year, month = now.month + 1, day = now.day })
 	else
 		return nil
 	end
