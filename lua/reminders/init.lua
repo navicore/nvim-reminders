@@ -2,6 +2,7 @@
 local M = {}
 local reminder_list = require("reminders.reminder_list")
 local time_parser = require("reminders.time_parser")
+local snooze = require("reminders.snooze")
 local api = vim.api
 local fn = vim.fn
 local has_devicons, devicons = pcall(require, "nvim-web-devicons")
@@ -171,18 +172,8 @@ local function show_reminders()
 end
 
 local function open_datetime_selector(line_nr)
-	local choices = {
-		"in 10 minutes",
-		"in 1 hour",
-		"in 2 hours",
-		"1pm today",
-		"tomorrow 6am",
-		"in 2 days",
-		"in 1 week",
-		"in 2 weeks",
-		"in 1 month",
-		"quit",
-	}
+	-- Build choices from shared module, add "quit" option
+	local choices = vim.list_extend(vim.deepcopy(snooze.choices), { "quit" })
 
 	require("telescope.pickers")
 		.new({}, {
@@ -192,7 +183,7 @@ local function open_datetime_selector(line_nr)
 			}),
 			sorter = require("telescope.config").values.generic_sorter({}),
 			layout_config = {
-				width = 0.3, -- Adjust the width to 60% of the editor's width
+				width = 0.3,
 			},
 			attach_mappings = function(prompt_bufnr, map)
 				map("i", "<CR>", function()
@@ -206,38 +197,6 @@ local function open_datetime_selector(line_nr)
 			end,
 		})
 		:find()
-end
-
-local function calculate_new_datetime(choice)
-	local current_time = os.time()
-	local now = os.date("*t")
-	local new_time
-
-	if choice == "in 10 minutes" then
-		new_time = current_time + 10 * 60
-	elseif choice == "in 1 hour" then
-		new_time = current_time + 1 * 60 * 60
-	elseif choice == "in 2 hours" then
-		new_time = current_time + 2 * 60 * 60
-	elseif choice == "1pm today" then
-		-- 1pm local time today
-		new_time = os.time({ year = now.year, month = now.month, day = now.day, hour = 13, min = 0, sec = 0 })
-	elseif choice == "tomorrow 6am" then
-		-- 6am local time tomorrow
-		new_time = os.time({ year = now.year, month = now.month, day = now.day + 1, hour = 6, min = 0, sec = 0 })
-	elseif choice == "in 2 days" then
-		new_time = current_time + 2 * 24 * 60 * 60
-	elseif choice == "in 1 week" then
-		new_time = current_time + 7 * 24 * 60 * 60
-	elseif choice == "in 2 weeks" then
-		new_time = current_time + 14 * 24 * 60 * 60
-	elseif choice == "in 1 month" then
-		new_time = os.time({ year = now.year, month = now.month + 1, day = now.day })
-	else
-		return nil
-	end
-
-	return os.date("!%Y-%m-%dT%H:%M:%SZ", new_time)
 end
 
 local function update_reminder_datetime(line, new_datetime)
@@ -257,7 +216,7 @@ function M.save_datetime(line_nr, choice)
 		return
 	end
 
-	local new_datetime = calculate_new_datetime(choice)
+	local new_datetime = snooze.calculate_new_datetime(choice)
 
 	if not new_datetime then
 		print("Failed to calculate new datetime.")
