@@ -239,9 +239,9 @@ function M.toggle_sort_order()
 	show_reminders()
 end
 
-function M.scan_reminders(upcoming)
+function M.scan_reminders(upcoming, threshold_hours)
 	if upcoming then
-		reminder_list.scan_paths_upcoming(M.config.paths)
+		reminder_list.scan_paths_upcoming(M.config.paths, threshold_hours)
 	else
 		reminder_list.scan_paths(M.config.paths)
 	end
@@ -254,6 +254,7 @@ function M.scan_reminders(upcoming)
 			paths = M.config.paths,
 			scan_type = upcoming and "upcoming" or "due",
 			prompt_title = upcoming and "Upcoming Reminders" or "Due Reminders",
+			threshold_hours = threshold_hours,
 		})
 	else
 		show_reminders()
@@ -281,9 +282,10 @@ api.nvim_create_user_command("ReminderScan", function()
 	M.scan_reminders(false)
 end, {})
 
-api.nvim_create_user_command("ReminderScanUpcoming", function()
-	M.scan_reminders(true)
-end, {})
+api.nvim_create_user_command("ReminderScanUpcoming", function(opts)
+	local hours = opts.args ~= "" and tonumber(opts.args) or nil
+	M.scan_reminders(true, hours)
+end, { nargs = "?" })
 
 api.nvim_create_user_command("ReminderScanAll", function()
 	reminder_list.scan_paths_all(M.config.paths)

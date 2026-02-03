@@ -107,15 +107,15 @@ function M.reminder_picker(opts)
 		return
 	end
 
-	-- Sort by datetime (oldest first by default for due reminders)
+	-- Sort by datetime (newest first, so oldest appears at bottom of list)
 	table.sort(reminders, function(a, b)
-		return (a.datetime or 0) < (b.datetime or 0)
+		return (a.datetime or 0) > (b.datetime or 0)
 	end)
 
 	local function reopen_picker()
 		-- Re-scan and reopen the picker
 		if opts.scan_type == "upcoming" then
-			reminder_list.scan_paths_upcoming(opts.paths)
+			reminder_list.scan_paths_upcoming(opts.paths, opts.threshold_hours)
 		elseif opts.scan_type == "all" then
 			reminder_list.scan_paths_all(opts.paths)
 		else
