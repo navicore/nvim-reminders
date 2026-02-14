@@ -69,18 +69,15 @@ for dir in "$@"; do
 done
 
 # Output for tmux with click support
-# Uses range=user|reminder to mark clickable region for reminders
-# Uses range=user|zett for the subtle Zett button when no reminders
-# Requires these binds in tmux.conf (two separate bindings):
+# "Zett" is always shown (range=user|zett) - opens Telekasten goto_today
+# When reminders are due, a red count badge (range=user|reminder) is also shown
+#   and "Zett" turns red for extra visibility
+# Requires these binds in tmux.conf:
 #   bind -Troot MouseDown1Status if -F '#{==:#{mouse_status_range},reminder}' { run-shell '/path/to/tmux-reminder-popup.sh' }
 #   bind -Troot MouseDown1Status if -F '#{==:#{mouse_status_range},zett}' { run-shell '/path/to/tmux-zett-popup.sh' }
 if [[ "$count" -gt 0 ]]; then
-    if [[ "$count" -eq 1 ]]; then
-        label=" $count reminder "
-    else
-        label=" $count reminders "
-    fi
-    echo "#[fg=#131a24,bg=#f7768e,bold]#[range=user|reminder]${label}#[norange]#[fg=#f7768e,bg=#131a24]"
+    # Red count badge (clickable for reminders) + red Zett (clickable for today's note)
+    echo "#[fg=#131a24,bg=#f7768e,bold]#[range=user|reminder] ${count} #[norange]#[fg=#f7768e,bg=#131a24,bold]#[range=user|zett] Zett #[norange]"
 else
     # No reminders - show subtle Zett button that opens Telekasten goto_today
     # Matches unselected tab style: grey text on dark background
