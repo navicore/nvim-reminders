@@ -1,3 +1,8 @@
+<!-- ghmig:moved -->
+> **This repository has moved to [https://git.navicore.tech/navicore/nvim-reminders](https://git.navicore.tech/navicore/nvim-reminders).**
+>
+> The GitHub copy is archived and no longer maintained.
+
 Neovim Reminders Plugin
 ===========
 
@@ -307,4 +312,3 @@ CI running tests is enabled by the above plus:
 
 Contributions are welcome! Please feel free to submit a pull request or open an
 issue if you have any suggestions or bug reports.
-
